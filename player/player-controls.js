@@ -24,12 +24,17 @@ class PlayerControls {
     this.player = player;
     this.container = container;
     this.settingsOpen = false;
-    this.currentPanel = 'main'; // 'main', 'audio', 'subtitles', 'speed', 'quality'
+    this.currentPanel = 'main';
     this.isSeeking = false;
     this._systemLang = (navigator.language || '').split('-')[0].toLowerCase();
     
+    // Detect player type
+    this._isShaka = player && typeof player.getVariantTracks === 'function';
+    this._isHls = player && typeof player.audioTracks !== 'undefined' || (player && player.audioTrack !== undefined);
+    
     // Store current selections
     this._currentAudio = null;
+    this._currentAudioIndex = -1;
     this._currentSubs = 'off';
     this._currentSpeed = 1;
     this._currentQuality = 'auto';
@@ -38,6 +43,9 @@ class PlayerControls {
     this.bindVideoEvents();
     this.bindControls();
     this.startHideTimer();
+    
+    // Auto-select Spanish audio if available
+    this.autoSelectPreferredAudio();
   }
 
   build() {
@@ -87,6 +95,48 @@ class PlayerControls {
     this.setupCast();
   }
 
+  autoSelectPreferredAudio() {
+    // Wait a bit for tracks to be available
+    setTimeout(() => {
+      const tracks = this.getAudioTracks();
+      if (tracks.length === 0) return;
+      
+      // Try to find Spanish track
+      const preferredLangs = ['es', 'spa', 'spanish', 'esp'];
+      let preferredTrack = null;
+      let preferredIndex = -1;
+      
+      for (let i = 0; i < tracks.length; i++) {
+        const lang = (tracks[i].language || tracks[i].lang || '').toLowerCase();
+        if (preferredLangs.some(pl => lang.includes(pl))) {
+          preferredTrack = tracks[i];
+          preferredIndex = i;
+          break;
+        }
+      }
+      
+      // If no Spanish, try system language
+      if (!preferredTrack && this._systemLang) {
+        for (let i = 0; i < tracks.length; i++) {
+          const lang = (tracks[i].language || tracks[i].lang || '').toLowerCase();
+          if (lang.includes(this._systemLang)) {
+            preferredTrack = tracks[i];
+            preferredIndex = i;
+            break;
+          }
+        }
+      }
+      
+      if (preferredTrack) {
+        this.selectAudioTrack(preferredTrack, preferredIndex);
+      } else if (tracks.length > 0) {
+        // Set current to first track
+        this._currentAudio = (tracks[0].language || tracks[0].lang || '').toLowerCase();
+        this._currentAudioIndex = 0;
+      }
+    }, 1500);
+  }
+
   setIcon(btn, name) {
     if (ICONS[name]) btn.innerHTML = ICONS[name];
   }
@@ -117,7 +167,7 @@ class PlayerControls {
       this.isSeeking = true;
       const pct = parseFloat(this.seekBar.value) / 100;
       this.playedBar.style.width = pct * 100 + '%';
-      if (this.video.duration) {
+      if (this.video.duration && isFinite(this.video.duration)) {
         this.video.currentTime = pct * this.video.duration;
       }
     });
@@ -126,7 +176,7 @@ class PlayerControls {
       if (e.target === this.seekBar) return;
       const rect = this.progressContainer.getBoundingClientRect();
       const pct = (e.clientX - rect.left) / rect.width;
-      if (this.video.duration) {
+      if (this.video.duration && isFinite(this.video.duration)) {
         this.video.currentTime = pct * this.video.duration;
       }
     });
@@ -162,7 +212,7 @@ class PlayerControls {
 
   updateProgress() {
     if (this.isSeeking) return;
-    if (this.video.duration) {
+    if (this.video.duration && isFinite(this.video.duration)) {
       const pct = (this.video.currentTime / this.video.duration) * 100;
       this.seekBar.value = pct;
       this.playedBar.style.width = pct + '%';
@@ -171,7 +221,7 @@ class PlayerControls {
   }
 
   updateBuffered() {
-    if (this.video.buffered.length > 0) {
+    if (this.video.buffered.length > 0 && this.video.duration && isFinite(this.video.duration)) {
       const end = this.video.buffered.end(this.video.buffered.length - 1);
       const pct = (end / this.video.duration) * 100;
       this.bufferedBar.style.width = pct + '%';
@@ -186,8 +236,12 @@ class PlayerControls {
 
   formatTime(t) {
     if (!t || !isFinite(t)) return '0:00';
-    const m = Math.floor(t / 60);
+    const h = Math.floor(t / 3600);
+    const m = Math.floor((t % 3600) / 60);
     const s = Math.floor(t % 60);
+    if (h > 0) {
+      return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    }
     return `${m}:${s.toString().padStart(2, '0')}`;
   }
 
@@ -251,13 +305,13 @@ class PlayerControls {
   }
 
   renderMainMenu() {
-    const audioLabel = this._currentAudio ? this._currentAudio.toUpperCase() : 'N/A';
+    const audioTracks = this.getAudioTracks();
+    const audioLabel = this._currentAudio ? this._currentAudio.toUpperCase() : (audioTracks.length > 0 ? 'Track 1' : 'N/A');
     const subsLabel = this._currentSubs === 'off' ? 'Off' : this._currentSubs.toUpperCase();
     const speedLabel = this._currentSpeed === 1 ? 'Normal' : `${this._currentSpeed}x`;
     const qualityLabel = this._currentQuality === 'auto' ? 'Auto' : `${this._currentQuality}p`;
 
-    // Check what options are available
-    const hasAudio = this.getAudioTracks().length > 0;
+    const hasAudio = audioTracks.length > 0;
     const hasSubs = this.getSubtitleTracks().length > 0;
 
     this.settingsPanelInner.innerHTML = `
@@ -318,52 +372,187 @@ class PlayerControls {
     }
   }
 
+  // ============================================
+  // AUDIO TRACKS - Support both Shaka and HLS.js
+  // ============================================
+
   getAudioTracks() {
-    if (!this.player || typeof this.player.getVariantTracks !== 'function') return [];
+    // Try Shaka Player first
+    if (this.player && typeof this.player.getVariantTracks === 'function') {
+      try {
+        const tracks = this.player.getVariantTracks() || [];
+        const seen = new Set();
+        const result = [];
+        tracks.forEach((t, index) => {
+          const lang = (t.language || '').toLowerCase();
+          const key = lang || `track_${index}`;
+          if (!seen.has(key)) {
+            seen.add(key);
+            result.push({
+              ...t,
+              _index: index,
+              _type: 'shaka',
+              language: lang || `Track ${result.length + 1}`
+            });
+          }
+        });
+        return result;
+      } catch (e) {}
+    }
+    
+    // Try HLS.js
+    if (this.player && this.player.audioTracks) {
+      try {
+        const tracks = [];
+        for (let i = 0; i < this.player.audioTracks.length; i++) {
+          const t = this.player.audioTracks[i];
+          tracks.push({
+            language: (t.lang || t.name || `Track ${i + 1}`).toLowerCase(),
+            name: t.name || t.lang || `Track ${i + 1}`,
+            _index: i,
+            _type: 'hls',
+            _track: t
+          });
+        }
+        return tracks;
+      } catch (e) {}
+    }
+    
+    // Try native video audioTracks
+    if (this.video && this.video.audioTracks && this.video.audioTracks.length > 0) {
+      try {
+        const tracks = [];
+        for (let i = 0; i < this.video.audioTracks.length; i++) {
+          const t = this.video.audioTracks[i];
+          tracks.push({
+            language: (t.language || t.label || `Track ${i + 1}`).toLowerCase(),
+            name: t.label || t.language || `Track ${i + 1}`,
+            _index: i,
+            _type: 'native',
+            _track: t
+          });
+        }
+        return tracks;
+      } catch (e) {}
+    }
+    
+    return [];
+  }
+
+  selectAudioTrack(track, index) {
+    this._currentAudio = track.language || track.name || `Track ${index + 1}`;
+    this._currentAudioIndex = index;
+    
     try {
-      const tracks = this.player.getVariantTracks() || [];
-      const seen = new Set();
-      return tracks.filter(t => {
-        const lang = (t.language || '').toLowerCase();
-        if (!lang || seen.has(lang)) return false;
-        seen.add(lang);
-        return true;
-      });
+      if (track._type === 'shaka' && this.player) {
+        // Shaka Player
+        if (typeof this.player.selectAudioLanguage === 'function') {
+          this.player.selectAudioLanguage(track.language);
+        } else if (typeof this.player.selectVariantTrack === 'function') {
+          const variants = this.player.getVariantTracks();
+          const variant = variants.find(v => (v.language || '').toLowerCase() === track.language.toLowerCase());
+          if (variant) {
+            this.player.selectVariantTrack(variant, true);
+          }
+        }
+      } else if (track._type === 'hls' && this.player) {
+        // HLS.js
+        this.player.audioTrack = track._index;
+      } else if (track._type === 'native' && this.video.audioTracks) {
+        // Native audio tracks
+        for (let i = 0; i < this.video.audioTracks.length; i++) {
+          this.video.audioTracks[i].enabled = (i === track._index);
+        }
+      }
     } catch (e) {
-      return [];
+      console.warn('Failed to select audio track:', e);
     }
   }
 
   getSubtitleTracks() {
-    if (!this.player || typeof this.player.getTextTracks !== 'function') return [];
-    try {
-      const tracks = this.player.getTextTracks() || [];
-      const seen = new Set();
-      return tracks.filter(t => {
-        const lang = (t.language || '').toLowerCase();
-        if (!lang || seen.has(lang)) return false;
-        seen.add(lang);
-        return true;
-      });
-    } catch (e) {
-      return [];
+    // Try Shaka Player
+    if (this.player && typeof this.player.getTextTracks === 'function') {
+      try {
+        const tracks = this.player.getTextTracks() || [];
+        const seen = new Set();
+        return tracks.filter(t => {
+          const lang = (t.language || '').toLowerCase();
+          if (!lang || seen.has(lang)) return false;
+          seen.add(lang);
+          return true;
+        }).map((t, i) => ({ ...t, _index: i, _type: 'shaka' }));
+      } catch (e) {}
     }
+    
+    // Try HLS.js subtitles
+    if (this.player && this.player.subtitleTracks) {
+      try {
+        return this.player.subtitleTracks.map((t, i) => ({
+          language: (t.lang || t.name || '').toLowerCase(),
+          name: t.name || t.lang,
+          _index: i,
+          _type: 'hls'
+        }));
+      } catch (e) {}
+    }
+    
+    // Try native text tracks
+    if (this.video && this.video.textTracks && this.video.textTracks.length > 0) {
+      try {
+        const tracks = [];
+        for (let i = 0; i < this.video.textTracks.length; i++) {
+          const t = this.video.textTracks[i];
+          if (t.kind === 'subtitles' || t.kind === 'captions') {
+            tracks.push({
+              language: (t.language || t.label || '').toLowerCase(),
+              name: t.label || t.language,
+              _index: i,
+              _type: 'native',
+              _track: t
+            });
+          }
+        }
+        return tracks;
+      } catch (e) {}
+    }
+    
+    return [];
   }
 
   getQualityTracks() {
-    if (!this.player || typeof this.player.getVariantTracks !== 'function') return [];
-    try {
-      const tracks = this.player.getVariantTracks() || [];
-      const seen = new Set();
-      return tracks.filter(t => {
-        const h = t.height || 0;
-        if (!h || seen.has(h)) return false;
-        seen.add(h);
-        return true;
-      });
-    } catch (e) {
-      return [];
+    if (this.player && typeof this.player.getVariantTracks === 'function') {
+      try {
+        const tracks = this.player.getVariantTracks() || [];
+        const seen = new Set();
+        return tracks.filter(t => {
+          const h = t.height || 0;
+          if (!h || seen.has(h)) return false;
+          seen.add(h);
+          return true;
+        }).map(t => ({ ...t, _type: 'shaka' }));
+      } catch (e) {}
     }
+    
+    // HLS.js levels
+    if (this.player && this.player.levels) {
+      try {
+        const seen = new Set();
+        return this.player.levels.filter((l, i) => {
+          const h = l.height || 0;
+          if (!h || seen.has(h)) return false;
+          seen.add(h);
+          return true;
+        }).map((l, i) => ({
+          height: l.height,
+          width: l.width,
+          bitrate: l.bitrate,
+          _index: i,
+          _type: 'hls'
+        }));
+      } catch (e) {}
+    }
+    
+    return [];
   }
 
   renderAudioMenu() {
@@ -375,12 +564,12 @@ class PlayerControls {
     if (tracks.length === 0) {
       html += '<div class="settings-option-item disabled">No audio tracks available</div>';
     } else {
-      tracks.forEach(t => {
-        const lang = (t.language || '').toLowerCase();
+      tracks.forEach((t, idx) => {
+        const lang = t.language || t.name || `Track ${idx + 1}`;
         const label = lang.toUpperCase();
-        const isActive = this._currentAudio === lang;
+        const isActive = this._currentAudioIndex === t._index || this._currentAudio === lang;
         html += `
-          <div class="settings-option-item ${isActive ? 'active' : ''}" data-lang="${lang}">
+          <div class="settings-option-item ${isActive ? 'active' : ''}" data-index="${t._index}" data-lang="${lang}">
             <span class="settings-option-check">${isActive ? ICONS.check : ''}</span>
             <span class="settings-option-label">${label}</span>
           </div>
@@ -392,14 +581,18 @@ class PlayerControls {
     this.settingsPanelInner.innerHTML = html;
     this.bindBackButton();
     
-    this.settingsPanelInner.querySelectorAll('.settings-option-item[data-lang]').forEach(item => {
+    const self = this;
+    this.settingsPanelInner.querySelectorAll('.settings-option-item[data-index]').forEach(item => {
       item.addEventListener('click', (e) => {
         e.stopPropagation();
-        const lang = item.dataset.lang;
-        this._currentAudio = lang;
-        try { this.player.selectAudioLanguage(lang); } catch (e) {}
-        this.currentPanel = 'main';
-        this.renderSettingsPanel();
+        const index = parseInt(item.dataset.index);
+        const tracks = self.getAudioTracks();
+        const track = tracks.find(t => t._index === index);
+        if (track) {
+          self.selectAudioTrack(track, index);
+        }
+        self.currentPanel = 'main';
+        self.renderSettingsPanel();
       });
     });
   }
@@ -410,7 +603,6 @@ class PlayerControls {
     let html = this.renderBackHeader('Subtitles');
     html += '<div class="settings-options-list">';
     
-    // Off option
     const offActive = this._currentSubs === 'off';
     html += `
       <div class="settings-option-item ${offActive ? 'active' : ''}" data-subs="off">
@@ -424,10 +616,10 @@ class PlayerControls {
     } else {
       tracks.forEach(t => {
         const lang = (t.language || '').toLowerCase();
-        const label = lang.toUpperCase();
+        const label = (t.name || lang || 'Unknown').toUpperCase();
         const isActive = this._currentSubs === lang;
         html += `
-          <div class="settings-option-item ${isActive ? 'active' : ''}" data-subs="${lang}" data-track-id="${t.id || ''}">
+          <div class="settings-option-item ${isActive ? 'active' : ''}" data-subs="${lang}" data-index="${t._index}">
             <span class="settings-option-check">${isActive ? ICONS.check : ''}</span>
             <span class="settings-option-label">${label}</span>
           </div>
@@ -439,25 +631,45 @@ class PlayerControls {
     this.settingsPanelInner.innerHTML = html;
     this.bindBackButton();
     
+    const self = this;
     this.settingsPanelInner.querySelectorAll('.settings-option-item[data-subs]').forEach(item => {
       item.addEventListener('click', (e) => {
         e.stopPropagation();
         const subs = item.dataset.subs;
-        this._currentSubs = subs;
+        const index = parseInt(item.dataset.index);
+        self._currentSubs = subs;
+        
         if (subs === 'off') {
-          try { this.player.setTextTrackVisibility(false); } catch (e) {}
+          // Disable subtitles
+          if (self.player && typeof self.player.setTextTrackVisibility === 'function') {
+            self.player.setTextTrackVisibility(false);
+          } else if (self.player && self.player.subtitleTrack !== undefined) {
+            self.player.subtitleTrack = -1;
+          } else if (self.video.textTracks) {
+            for (let i = 0; i < self.video.textTracks.length; i++) {
+              self.video.textTracks[i].mode = 'hidden';
+            }
+          }
         } else {
-          const tracks = this.getSubtitleTracks();
+          // Enable selected subtitle
+          const tracks = self.getSubtitleTracks();
           const track = tracks.find(t => (t.language || '').toLowerCase() === subs);
           if (track) {
-            try {
-              this.player.selectTextTrack(track);
-              this.player.setTextTrackVisibility(true);
-            } catch (e) {}
+            if (track._type === 'shaka' && self.player) {
+              self.player.selectTextTrack(track);
+              self.player.setTextTrackVisibility(true);
+            } else if (track._type === 'hls' && self.player) {
+              self.player.subtitleTrack = track._index;
+            } else if (track._type === 'native') {
+              for (let i = 0; i < self.video.textTracks.length; i++) {
+                self.video.textTracks[i].mode = (i === track._index) ? 'showing' : 'hidden';
+              }
+            }
           }
         }
-        this.currentPanel = 'main';
-        this.renderSettingsPanel();
+        
+        self.currentPanel = 'main';
+        self.renderSettingsPanel();
       });
     });
   }
@@ -483,14 +695,15 @@ class PlayerControls {
     this.settingsPanelInner.innerHTML = html;
     this.bindBackButton();
     
+    const self = this;
     this.settingsPanelInner.querySelectorAll('.settings-option-item[data-speed]').forEach(item => {
       item.addEventListener('click', (e) => {
         e.stopPropagation();
         const speed = parseFloat(item.dataset.speed);
-        this._currentSpeed = speed;
-        try { this.video.playbackRate = speed; } catch (e) {}
-        this.currentPanel = 'main';
-        this.renderSettingsPanel();
+        self._currentSpeed = speed;
+        self.video.playbackRate = speed;
+        self.currentPanel = 'main';
+        self.renderSettingsPanel();
       });
     });
   }
@@ -501,7 +714,6 @@ class PlayerControls {
     let html = this.renderBackHeader('Quality');
     html += '<div class="settings-options-list">';
     
-    // Auto option
     const autoActive = this._currentQuality === 'auto';
     html += `
       <div class="settings-option-item ${autoActive ? 'active' : ''}" data-quality="auto">
@@ -513,13 +725,12 @@ class PlayerControls {
     if (tracks.length === 0) {
       html += '<div class="settings-option-item disabled">No quality options</div>';
     } else {
-      // Sort by height descending
       const sorted = [...tracks].sort((a, b) => (b.height || 0) - (a.height || 0));
       sorted.forEach(t => {
         const h = t.height || 0;
         const isActive = this._currentQuality === h;
         html += `
-          <div class="settings-option-item ${isActive ? 'active' : ''}" data-quality="${h}">
+          <div class="settings-option-item ${isActive ? 'active' : ''}" data-quality="${h}" data-index="${t._index !== undefined ? t._index : ''}">
             <span class="settings-option-check">${isActive ? ICONS.check : ''}</span>
             <span class="settings-option-label">${h}p</span>
           </div>
@@ -531,25 +742,43 @@ class PlayerControls {
     this.settingsPanelInner.innerHTML = html;
     this.bindBackButton();
     
+    const self = this;
     this.settingsPanelInner.querySelectorAll('.settings-option-item[data-quality]').forEach(item => {
       item.addEventListener('click', (e) => {
         e.stopPropagation();
         const quality = item.dataset.quality;
+        const index = item.dataset.index;
+        
         if (quality === 'auto') {
-          this._currentQuality = 'auto';
-          try { this.player.configure({ abr: { enabled: true } }); } catch (e) {}
+          self._currentQuality = 'auto';
+          if (self.player && typeof self.player.configure === 'function') {
+            self.player.configure({ abr: { enabled: true } });
+          } else if (self.player && self.player.currentLevel !== undefined) {
+            self.player.currentLevel = -1; // Auto for HLS.js
+          }
         } else {
           const h = parseInt(quality);
-          this._currentQuality = h;
-          try {
-            this.player.configure({ abr: { enabled: false } });
-            const tracks = this.player.getVariantTracks();
+          self._currentQuality = h;
+          
+          if (self.player && typeof self.player.configure === 'function') {
+            // Shaka
+            self.player.configure({ abr: { enabled: false } });
+            const tracks = self.player.getVariantTracks();
             const match = tracks.filter(t => t.height === h);
-            if (match.length > 0) this.player.selectVariantTrack(match[0], true);
-          } catch (e) {}
+            if (match.length > 0) {
+              self.player.selectVariantTrack(match[0], true);
+            }
+          } else if (self.player && self.player.levels) {
+            // HLS.js
+            const levelIndex = self.player.levels.findIndex(l => l.height === h);
+            if (levelIndex !== -1) {
+              self.player.currentLevel = levelIndex;
+            }
+          }
         }
-        this.currentPanel = 'main';
-        this.renderSettingsPanel();
+        
+        self.currentPanel = 'main';
+        self.renderSettingsPanel();
       });
     });
   }
@@ -576,16 +805,6 @@ class PlayerControls {
     this.castBtn.addEventListener('click', () => {
       this.castBtn.classList.toggle('casting');
     });
-  }
-
-  updateTracks() {
-    // Update current selections based on player state
-    const audioTracks = this.getAudioTracks();
-    if (audioTracks.length > 0 && !this._currentAudio) {
-      // Find active or set to system language
-      const systemTrack = audioTracks.find(t => (t.language || '').toLowerCase() === this._systemLang);
-      this._currentAudio = systemTrack ? this._systemLang : (audioTracks[0].language || '').toLowerCase();
-    }
   }
 
   destroy() {

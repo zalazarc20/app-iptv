@@ -7,10 +7,6 @@ const playlistUrlInput = document.getElementById('playlistUrlInput');
 const loadUrlBtn = document.getElementById('loadUrlBtn');
 const startScreen = document.getElementById('startScreen');
 const channelCount = document.getElementById('channelCount');
-const epgPanel = document.getElementById('epgPanel');
-const epgContent = document.getElementById('epgContent');
-const epgTitle = document.getElementById('epgTitle');
-const epgCloseBtn = document.getElementById('epgCloseBtn');
 const settingsBtn = document.getElementById('settingsBtn');
 const errorOverlay = document.getElementById('errorOverlay');
 const errorMessage = document.getElementById('errorMessage');
@@ -21,6 +17,7 @@ let channels = [];
 let epgData = null;
 let mergedProgrammes = [];
 let currentChannelIndex = -1;
+let currentChannel = null;
 let hlsInstance = null;
 let shakaPlayer = null;
 let playerControls = null;
@@ -83,7 +80,7 @@ function parseM3U(content, url) {
         name,
         tvgId: tvgIdMatch ? tvgIdMatch[1] : '',
         tvgName: tvgNameMatch ? tvgNameMatch[1] : '',
-        tvgLogo: tvgLogoMatch ? tvgLogoMatch[1] : '',
+        logo: tvgLogoMatch ? tvgLogoMatch[1] : '',
         group: groupMatch ? groupMatch[1] : '',
         epgShift: epgShiftMatch ? parseFloat(epgShiftMatch[1]) : 0,
         buffer: bufferMatch ? parseInt(bufferMatch[1]) : 0,
@@ -111,7 +108,6 @@ function parseEPGText(xmlText) {
   const lines = xmlText.split('\n');
   let current = null;
 
-  // Funcion para decodificar entidades HTML
   function decodeHTMLEntities(text) {
     if (!text) return '';
     return text
@@ -122,7 +118,6 @@ function parseEPGText(xmlText) {
       .replace(/&apos;/g, "'")
       .replace(/&#(\d+);/g, (match, dec) => String.fromCharCode(dec))
       .replace(/&#x([0-9A-Fa-f]+);/g, (match, hex) => String.fromCharCode(parseInt(hex, 16)))
-      // Caracteres especiales comunes mal codificados
       .replace(/Â¿/g, '¿')
       .replace(/Â¡/g, '¡')
       .replace(/Ã¡/g, 'á')
@@ -181,7 +176,6 @@ async function parseEPG(url) {
 
     const header = new Uint8Array(buffer.slice(0, 2));
     if (header[0] === 0x1f && header[1] === 0x8b) {
-      // GZIP compressed
       const ds = new DecompressionStream('gzip');
       const writer = ds.writable.getWriter();
       writer.write(new Uint8Array(buffer));
@@ -202,13 +196,11 @@ async function parseEPG(url) {
       }
       text = new TextDecoder('utf-8').decode(combined);
     } else {
-      // Intentar detectar encoding del XML
       const preview = new TextDecoder('utf-8').decode(buffer.slice(0, 500));
       const encodingMatch = preview.match(/encoding\s*=\s*["']([^"']+)["']/i);
       let encoding = 'utf-8';
       if (encodingMatch) {
         encoding = encodingMatch[1].toLowerCase();
-        // Mapear encodings comunes
         if (encoding === 'iso-8859-1' || encoding === 'latin1' || encoding === 'latin-1') {
           encoding = 'iso-8859-1';
         }
@@ -254,6 +246,7 @@ function normalizeKey(key) {
 
 function parseEPGDate(dateStr) {
   if (!dateStr) return null;
+  if (dateStr instanceof Date) return dateStr;
   const match = dateStr.match(/(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})\s*([+-]\d{4})?/);
   if (match) {
     const d = new Date(
@@ -275,47 +268,91 @@ function parseEPGDate(dateStr) {
   try { return new Date(dateStr); } catch (e) { return null; }
 }
 
-function renderChannelList(filter = '') {
-  const filtered = filter
-    ? channels.filter(c =>
-        c.name.toLowerCase().includes(filter.toLowerCase()) ||
-        c.group.toLowerCase().includes(filter.toLowerCase())
-      )
-    : channels;
+function renderChannelList() {
+  const list = document.getElementById('channelList');
+  const search = document.getElementById('searchInput');
+  const filter = (search?.value || '').toLowerCase();
 
-  channelList.innerHTML = '';
-  filtered.forEach((ch, idx) => {
-    const realIdx = channels.indexOf(ch);
-    const item = document.createElement('div');
-    item.className = 'channel-item' + (realIdx === currentChannelIndex ? ' active' : '');
-    item.innerHTML = `
-      <img class="channel-logo" src="${ch.tvgLogo || 'tv-icon.png'}" alt="" loading="lazy"
-        onerror="this.src='tv-icon.png'">
-      <div class="channel-info">
-        <div class="channel-name">${ch.name}</div>
-        <div class="channel-group">${ch.group || 'General'}</div>
+  const filtered = channels.filter(ch =>
+    ch.name.toLowerCase().includes(filter) ||
+    (ch.group || '').toLowerCase().includes(filter)
+  );
+
+  if (filtered.length === 0) {
+    list.innerHTML = `
+      <div class="empty-state">
+        <div>No channels found</div>
+        <div class="hint">${channels.length === 0 ? 'Load a playlist to get started' : 'Try a different search'}</div>
       </div>
     `;
-    item.addEventListener('click', () => playChannel(realIdx));
-    channelList.appendChild(item);
+    return;
+  }
+
+  list.innerHTML = filtered.map(ch => {
+    const currentProg = getCurrentProgram(ch);
+    const nowPlaying = currentProg ? currentProg.title : '';
+    
+    return `
+      <div class="channel-item ${currentChannel && currentChannel.url === ch.url ? 'active' : ''}" 
+           data-url="${ch.url}" 
+           data-channel-index="${channels.indexOf(ch)}">
+        ${ch.logo ? `<img class="channel-logo" src="${ch.logo}" alt="" loading="lazy" onerror="this.style.display='none'">` : '<div class="channel-logo-placeholder"></div>'}
+        <div class="channel-info">
+          <div class="channel-name">${ch.name}</div>
+          ${ch.group ? `<div class="channel-group">${ch.group}</div>` : ''}
+          ${nowPlaying ? `<div class="channel-now">${nowPlaying}</div>` : ''}
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  list.querySelectorAll('.channel-item').forEach(el => {
+    el.addEventListener('click', () => {
+      const idx = parseInt(el.dataset.channelIndex);
+      if (!isNaN(idx) && channels[idx]) {
+        playChannel(idx);
+      }
+    });
+    
+    el.addEventListener('mouseenter', () => {
+      const idx = parseInt(el.dataset.channelIndex);
+      if (!isNaN(idx) && channels[idx]) {
+        showEpgTooltip(channels[idx], el);
+      }
+    });
+    
+    el.addEventListener('mouseleave', () => {
+      hideEpgTooltip();
+    });
   });
 
-  channelCount.textContent = `${channels.length} channels`;
+  // Update channel count
+  const countEl = document.getElementById('channelCount');
+  if (countEl) countEl.textContent = `${channels.length} channels`;
 }
 
 function showError(msg) {
-  errorOverlay.style.display = 'block';
-  errorMessage.textContent = msg;
+  if (errorOverlay) errorOverlay.style.display = 'block';
+  if (errorMessage) errorMessage.textContent = msg;
 }
 
 function hideError() {
-  errorOverlay.style.display = 'none';
+  if (errorOverlay) errorOverlay.style.display = 'none';
+}
+
+function showLoading() {
+  if (loadingOverlay) loadingOverlay.style.display = 'flex';
+}
+
+function hideLoading() {
+  if (loadingOverlay) loadingOverlay.style.display = 'none';
 }
 
 async function playChannel(index) {
   if (index < 0 || index >= channels.length) return;
   currentChannelIndex = index;
   const ch = channels[index];
+  currentChannel = ch;
 
   if (playerControls) {
     playerControls.destroy();
@@ -334,8 +371,8 @@ async function playChannel(index) {
     shakaPlayer = null;
   }
 
-  startScreen.style.display = 'none';
-  renderChannelList(searchInput.value);
+  if (startScreen) startScreen.style.display = 'none';
+  renderChannelList();
 
   const url = ch.url;
   const isM3U8 = url.includes('.m3u8');
@@ -366,104 +403,233 @@ async function playChannel(index) {
     }
   }
 
-  if (isM3U8) {
-    if (Hls.isSupported()) {
-      hlsInstance = new Hls();
-      if (ch.buffer > 0) {
-        hlsInstance.config.maxBufferLength = ch.buffer;
-      }
-      hlsInstance.loadSource(url);
-      hlsInstance.attachMedia(video);
-      hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
-        video.play().catch(() => {});
-      });
-    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-      video.src = url;
-      video.play().catch(() => {});
-    }
-  } else if (isMPD) {
-    shaka.polyfill.installAll();
-    shakaPlayer = new shaka.Player(video);
-    hideError();
-    shakaPlayer.addEventListener('error', (event) => {
-      showError('Shaka Player: ' + (event.detail?.message || 'Unknown error'));
-    });
-    const config = {};
-    if (clearkey) {
-      const clearKeys = {};
-      for (const [kid, key] of Object.entries(clearkey)) {
-        if (kid !== '_url') {
-          clearKeys[normalizeKey(kid)] = normalizeKey(key);
+  showLoading();
+  hideError();
+
+  try {
+    if (isM3U8) {
+      if (typeof Hls !== 'undefined' && Hls.isSupported()) {
+        hlsInstance = new Hls();
+        if (ch.buffer > 0) {
+          hlsInstance.config.maxBufferLength = ch.buffer;
         }
+        hlsInstance.loadSource(url);
+        hlsInstance.attachMedia(video);
+        hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
+          hideLoading();
+          video.play().catch(() => {});
+        });
+        hlsInstance.on(Hls.Events.ERROR, (event, data) => {
+          if (data.fatal) {
+            hideLoading();
+            showError('HLS Error: ' + data.type);
+          }
+        });
+      } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+        video.src = url;
+        video.addEventListener('loadedmetadata', () => hideLoading(), { once: true });
+        video.play().catch(() => {});
       }
-      if (Object.keys(clearKeys).length > 0) {
-        config.drm = { clearKeys };
+    } else if (isMPD) {
+      if (typeof shaka !== 'undefined') {
+        shaka.polyfill.installAll();
+        shakaPlayer = new shaka.Player(video);
+        hideError();
+        shakaPlayer.addEventListener('error', (event) => {
+          hideLoading();
+          showError('Shaka Player: ' + (event.detail?.message || 'Unknown error'));
+        });
+        const config = {};
+        if (clearkey) {
+          const clearKeys = {};
+          for (const [kid, key] of Object.entries(clearkey)) {
+            if (kid !== '_url') {
+              clearKeys[normalizeKey(kid)] = normalizeKey(key);
+            }
+          }
+          if (Object.keys(clearKeys).length > 0) {
+            config.drm = { clearKeys };
+          }
+        }
+        if (Object.keys(config).length > 0) shakaPlayer.configure(config);
+        await shakaPlayer.load(url);
+        hideLoading();
+        hideError();
+        video.play().catch(() => {});
       }
-    }
-    if (Object.keys(config).length > 0) shakaPlayer.configure(config);
-    try {
-      await shakaPlayer.load(url);
-      hideError();
+    } else {
+      video.src = url;
+      video.addEventListener('loadedmetadata', () => hideLoading(), { once: true });
       video.play().catch(() => {});
-    } catch (e) {
-      showError('Shaka error: ' + e.message);
     }
-  } else {
-    video.src = url;
-    video.play().catch(() => {});
+  } catch (e) {
+    hideLoading();
+    showError('Error: ' + e.message);
   }
 
-  const controlsContainer = document.getElementById('customControlsContainer');
+  const controlsContainer = document.getElementById('controlsContainer');
   if (controlsContainer && typeof PlayerControls !== 'undefined') {
     playerControls = new PlayerControls(video, shakaPlayer || hlsInstance, controlsContainer);
   }
 
-  if (ch.tvgId && mergedProgrammes.length > 0) {
-    const epg = getEPGForChannel(ch.tvgId, mergedProgrammes);
-    if (epg.length > 0) {
-      showEPG(ch.name, epg);
-    } else {
-      if (ch.tvgName) {
-        const byName = getEPGForChannel(ch.tvgName, mergedProgrammes);
-        if (byName.length > 0) {
-          showEPG(ch.name, byName);
-        } else {
-          hideEPG();
-        }
-      } else {
-        hideEPG();
-      }
-    }
+  // Show channel overlay
+  showChannelOverlay(ch);
+}
+
+// ============================================
+// CHANNEL OVERLAY (Logo + Name + Current Program)
+// ============================================
+
+let channelOverlayTimer = null;
+
+function showChannelOverlay(channel) {
+  const overlay = document.getElementById('channelOverlay');
+  const logo = document.getElementById('channelOverlayLogo');
+  const name = document.getElementById('channelOverlayName');
+  const program = document.getElementById('channelOverlayProgram');
+  
+  if (!overlay) return;
+  
+  if (channel.logo) {
+    logo.src = channel.logo;
+    logo.style.display = 'block';
   } else {
-    hideEPG();
+    logo.style.display = 'none';
   }
+  
+  name.textContent = channel.name || 'Unknown Channel';
+  
+  const currentProg = getCurrentProgram(channel);
+  if (currentProg) {
+    program.textContent = currentProg.title;
+  } else {
+    program.textContent = '';
+  }
+  
+  overlay.classList.add('visible');
+  
+  clearTimeout(channelOverlayTimer);
+  channelOverlayTimer = setTimeout(() => {
+    overlay.classList.remove('visible');
+  }, 5000);
 }
 
-function showEPG(title, programmes) {
-  if (!programmes || programmes.length === 0) {
-    hideEPG();
-    return;
-  }
+function hideChannelOverlay() {
+  const overlay = document.getElementById('channelOverlay');
+  if (overlay) overlay.classList.remove('visible');
+  clearTimeout(channelOverlayTimer);
+}
+
+function getCurrentProgram(channel) {
+  if (!channel) return null;
+  
+  const channelId = channel.tvgId || channel.tvgName || channel.name;
+  const epgList = getEPGForChannel(channelId, mergedProgrammes);
+  
+  if (!epgList || epgList.length === 0) return null;
+  
   const now = new Date();
-  const currentIdx = programmes.findIndex(p => p.isCurrent);
-  const startIdx = Math.max(0, currentIdx - 1);
-  const display = programmes.slice(startIdx, startIdx + 8);
-
-  epgTitle.textContent = `EPG: ${title}`;
-  epgContent.innerHTML = display.map(p => {
-    const startTime = p.start ? p.start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
-    const stopTime = p.stop ? p.stop.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
-    return `<div class="epg-item${p.isCurrent ? ' current' : ''}">
-      <span class="epg-time">${startTime} - ${stopTime}</span>
-      <span class="epg-title">${p.title || 'No title'}</span>
-      ${p.desc ? `<br><span class="epg-desc">${p.desc}</span>` : ''}
-    </div>`;
-  }).join('');
-  epgPanel.style.display = 'block';
+  for (const prog of epgList) {
+    const start = prog.start instanceof Date ? prog.start : parseEPGDate(prog.start);
+    const stop = prog.stop instanceof Date ? prog.stop : parseEPGDate(prog.stop);
+    if (start && stop && now >= start && now < stop) {
+      return prog;
+    }
+  }
+  return null;
 }
 
-function hideEPG() {
-  epgPanel.style.display = 'none';
+// ============================================
+// EPG TOOLTIP (on hover in sidebar)
+// ============================================
+
+let epgTooltip = null;
+let epgTooltipTimeout = null;
+
+function createEpgTooltip() {
+  if (epgTooltip) return epgTooltip;
+  
+  epgTooltip = document.createElement('div');
+  epgTooltip.className = 'epg-tooltip';
+  epgTooltip.id = 'epgTooltip';
+  document.body.appendChild(epgTooltip);
+  
+  return epgTooltip;
+}
+
+function showEpgTooltip(channel, anchorElement) {
+  const tooltip = createEpgTooltip();
+  
+  const channelId = channel.tvgId || channel.tvgName || channel.name;
+  let epgList = getEPGForChannel(channelId, mergedProgrammes);
+  
+  let html = `<div class="epg-tooltip-header">EPG: ${escapeHtml(channel.name)}</div>`;
+  html += '<div class="epg-tooltip-content">';
+  
+  if (!epgList || epgList.length === 0) {
+    html += '<div class="epg-tooltip-empty">No program info available</div>';
+  } else {
+    const programs = epgList.slice(0, 10);
+    
+    for (const prog of programs) {
+      const start = prog.start instanceof Date ? prog.start : parseEPGDate(prog.start);
+      const stop = prog.stop instanceof Date ? prog.stop : parseEPGDate(prog.stop);
+      const isCurrent = prog.isCurrent || (start && stop && new Date() >= start && new Date() < stop);
+      
+      const timeStr = formatEPGTime(start) + ' - ' + formatEPGTime(stop);
+      
+      html += `
+        <div class="epg-tooltip-item ${isCurrent ? 'current' : ''}">
+          <span class="epg-tooltip-time">${timeStr}</span>
+          <span class="epg-tooltip-title">${escapeHtml(prog.title)}</span>
+        </div>
+      `;
+    }
+  }
+  html += '</div>';
+  
+  tooltip.innerHTML = html;
+  
+  const rect = anchorElement.getBoundingClientRect();
+  
+  let top = rect.top;
+  let left = rect.right + 10;
+  
+  if (top + 300 > window.innerHeight) {
+    top = window.innerHeight - 310;
+  }
+  if (top < 10) top = 10;
+  
+  tooltip.style.top = top + 'px';
+  tooltip.style.left = left + 'px';
+  
+  clearTimeout(epgTooltipTimeout);
+  tooltip.classList.add('visible');
+}
+
+function hideEpgTooltip() {
+  clearTimeout(epgTooltipTimeout);
+  epgTooltipTimeout = setTimeout(() => {
+    if (epgTooltip) {
+      epgTooltip.classList.remove('visible');
+    }
+  }, 100);
+}
+
+function escapeHtml(text) {
+  if (!text) return '';
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function formatEPGTime(date) {
+  if (!date) return '--:--';
+  const h = date.getHours().toString().padStart(2, '0');
+  const m = date.getMinutes().toString().padStart(2, '0');
+  return h + ':' + m;
 }
 
 async function loadAllEPGs(epgUrls) {
@@ -482,7 +648,7 @@ async function loadAllEPGs(epgUrls) {
 }
 
 async function loadPlaylist(url) {
-  loadingOverlay.style.display = 'flex';
+  showLoading();
   try {
     channels = [];
     mergedProgrammes = [];
@@ -509,6 +675,7 @@ async function loadPlaylist(url) {
       await loadAllEPGs([...epgUrls]);
       if (mergedProgrammes.length > 0) {
         updateEPGStatus(`EPG: ${mergedProgrammes.length} programmes`);
+        renderChannelList(); // Re-render to show now playing
       } else {
         updateEPGStatus('EPG: no programmes found');
       }
@@ -520,12 +687,12 @@ async function loadPlaylist(url) {
       await playChannel(0);
     }
 
-    loadingOverlay.style.display = 'none';
+    hideLoading();
     return true;
   } catch (e) {
     console.error('Failed to load playlist:', e);
     updateEPGStatus('Failed to load playlist');
-    loadingOverlay.style.display = 'none';
+    hideLoading();
     return false;
   }
 }
@@ -538,7 +705,7 @@ function updateEPGStatus(msg) {
 async function loadFromHash() {
   const hash = window.location.hash.substring(1);
   if (hash && hash.startsWith('http')) {
-    playlistUrlInput.value = hash;
+    if (playlistUrlInput) playlistUrlInput.value = hash;
     await loadPlaylist(hash);
   }
 }
@@ -558,38 +725,54 @@ function handleFileUpload() {
   input.click();
 }
 
-searchInput.addEventListener('input', (e) => {
-  renderChannelList(e.target.value);
-});
+// Event listeners with null checks
+if (searchInput) {
+  searchInput.addEventListener('input', () => {
+    renderChannelList();
+  });
+}
 
-loadPlaylistBtn.addEventListener('click', handleFileUpload);
-loadFileBtn.addEventListener('click', handleFileUpload);
+if (loadPlaylistBtn) {
+  loadPlaylistBtn.addEventListener('click', handleFileUpload);
+}
 
-loadUrlBtn.addEventListener('click', async () => {
-  const url = playlistUrlInput.value.trim();
-  if (url) {
-    await loadPlaylist(url);
-  }
-});
+if (loadFileBtn) {
+  loadFileBtn.addEventListener('click', handleFileUpload);
+}
 
-playlistUrlInput.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') loadUrlBtn.click();
-});
+if (loadUrlBtn) {
+  loadUrlBtn.addEventListener('click', async () => {
+    const url = playlistUrlInput?.value.trim();
+    if (url) {
+      await loadPlaylist(url);
+    }
+  });
+}
 
-epgCloseBtn.addEventListener('click', hideEPG);
+if (playlistUrlInput) {
+  playlistUrlInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && loadUrlBtn) loadUrlBtn.click();
+  });
+}
 
-settingsBtn.addEventListener('click', () => {
-  const url = window.location.href.replace('iptv/player.html', 'pages/settings.html');
-  window.location.href = url;
-});
+if (settingsBtn) {
+  settingsBtn.addEventListener('click', () => {
+    const url = window.location.href.replace('iptv/player.html', 'pages/settings.html');
+    window.location.href = url;
+  });
+}
 
-errorCloseBtn.addEventListener('click', hideError);
+if (errorCloseBtn) {
+  errorCloseBtn.addEventListener('click', hideError);
+}
 
 window.addEventListener('keydown', (e) => {
   if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
     e.preventDefault();
-    searchInput.focus();
-    searchInput.select();
+    if (searchInput) {
+      searchInput.focus();
+      searchInput.select();
+    }
     return;
   }
   if (e.code === 'Space') {

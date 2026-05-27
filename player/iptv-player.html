@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -7,6 +8,7 @@
   <link rel="stylesheet" href="iptv-player.css">
   <link rel="stylesheet" href="player-controls.css">
 </head>
+
 <body>
   <div class="app">
     <div class="sidebar" id="sidebar">
@@ -31,47 +33,60 @@
         <button id="settingsBtn" class="btn btn-sm">⚙</button>
       </div>
     </div>
+
     <div class="main-content">
-      <div id="playerContainer">
-        <div id="loadingOverlay" class="loading-overlay" style="display:none;">
-          <div class="spinner"></div>
-          <span class="loading-text">Loading playlist...</span>
-        </div>
-        <video id="video" autoplay crossorigin="anonymous"></video>
-        <div id="customControlsContainer"></div>
-        <div id="epgPanel" class="epg-panel" style="display:none;">
-          <div class="epg-header">
-            <span id="epgTitle">Now Playing</span>
-            <button id="epgCloseBtn" class="btn btn-xs">✕</button>
-          </div>
-          <div id="epgContent" class="epg-content"></div>
-        </div>
-        <div id="errorOverlay" class="video-overlay" style="display:none;">
-          <div class="error-content">
-            <span id="errorMessage" class="error-message"></span>
-            <button id="errorCloseBtn" class="btn btn-xs">✕</button>
-          </div>
-        </div>
-        <div id="startScreen" class="start-screen">
-          <div class="start-content">
-            <h1>📺 IPTV Player</h1>
-            <p>Load an M3U playlist to get started</p>
-            <div class="start-actions">
-              <button id="loadFileBtn" class="btn btn-lg">📂 Load M3U File</button>
-              <p class="or">or</p>
-              <div class="url-input-group">
-                <input type="text" id="playlistUrlInput" placeholder="Paste M3U URL here..." class="url-input">
-                <button id="loadUrlBtn" class="btn btn-lg">Load</button>
-              </div>
+      <!-- Start Screen -->
+      <div class="start-screen" id="startScreen">
+        <div class="start-content">
+          <h1>IPTV Player</h1>
+          <p>Load a playlist to start watching</p>
+          <div class="start-actions">
+            <button id="loadFileBtn" class="btn btn-lg">Load M3U File</button>
+            <span class="or">or</span>
+            <div class="url-input-group">
+              <input type="text" id="playlistUrlInput" class="url-input" placeholder="Enter playlist URL...">
+              <button id="loadUrlBtn" class="btn btn-sm">Load</button>
             </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="playerContainer">
+        <video id="video" playsinline></video>
+
+        <!-- Channel Info Overlay (logo + nombre + programa actual) -->
+        <div class="channel-overlay" id="channelOverlay">
+          <img class="channel-overlay-logo" id="channelOverlayLogo" src="" alt="">
+          <div class="channel-overlay-info">
+            <div class="channel-overlay-name" id="channelOverlayName"></div>
+            <div class="channel-overlay-program" id="channelOverlayProgram"></div>
+          </div>
+        </div>
+
+        <!-- Player controls container -->
+        <div id="controlsContainer"></div>
+
+        <!-- Loading overlay -->
+        <div class="loading-overlay" id="loadingOverlay" style="display:none">
+          <div class="spinner"></div>
+          <span class="loading-text">Loading...</span>
+        </div>
+
+        <!-- Error overlay -->
+        <div class="video-overlay" id="errorOverlay" style="display:none">
+          <div class="error-content">
+            <span class="error-message" id="errorMessage"></span>
+            <button class="btn-xs" id="errorCloseBtn">✕</button>
           </div>
         </div>
       </div>
     </div>
   </div>
+
   <script src="/js/hls.min.js"></script>
   <script src="/js/shaka-player.compiled.js"></script>
   <script src="player-controls.js"></script>
   <script src="iptv-player.js"></script>
 </body>
+
 </html>

@@ -431,3 +431,174 @@ html, body {
   font-size: 14px;
   color: rgba(255, 255, 255, 0.6);
 }
+
+/* ============================================
+   CHANNEL OVERLAY (Logo + Name + Current Program)
+   ============================================ */
+
+.channel-overlay {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 16px;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: 10px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  z-index: 15;
+  opacity: 0;
+  transform: translateY(-10px);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  pointer-events: none;
+  max-width: 400px;
+}
+
+.channel-overlay.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.channel-overlay-logo {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  object-fit: contain;
+  background: rgba(255, 255, 255, 0.1);
+  flex-shrink: 0;
+}
+
+.channel-overlay-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.channel-overlay-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.channel-overlay-program {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.7);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.channel-overlay-program:empty {
+  display: none;
+}
+
+/* ============================================
+   EPG TOOLTIP (on hover in sidebar)
+   ============================================ */
+
+.epg-tooltip {
+  position: fixed;
+  background: rgba(20, 20, 20, 0.95);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-radius: 10px;
+  padding: 0;
+  min-width: 280px;
+  max-width: 340px;
+  max-height: 300px;
+  z-index: 1000;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateX(10px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.epg-tooltip.visible {
+  opacity: 1;
+  transform: translateX(0);
+  pointer-events: auto;
+}
+
+.epg-tooltip-header {
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.epg-tooltip-content {
+  max-height: 240px;
+  overflow-y: auto;
+  padding: 6px 0;
+}
+
+.epg-tooltip-content::-webkit-scrollbar {
+  width: 4px;
+}
+
+.epg-tooltip-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.epg-tooltip-content::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 2px;
+}
+
+.epg-tooltip-item {
+  padding: 8px 14px;
+  display: flex;
+  gap: 10px;
+  font-size: 13px;
+}
+
+.epg-tooltip-item.current {
+  background: rgba(62, 166, 255, 0.15);
+  border-left: 3px solid #3ea6ff;
+  padding-left: 11px;
+}
+
+.epg-tooltip-item.current .epg-tooltip-title {
+  color: #fff;
+  font-weight: 500;
+}
+
+.epg-tooltip-time {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 11px;
+  white-space: nowrap;
+  min-width: 75px;
+}
+
+.epg-tooltip-title {
+  color: rgba(255, 255, 255, 0.85);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.epg-tooltip-empty {
+  padding: 20px 14px;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 13px;
+}
+
+.channel-logo-placeholder {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  flex-shrink: 0;
+}
