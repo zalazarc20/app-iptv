@@ -29,11 +29,30 @@ No more hunting for stream URLs in page source or network tabs. The extension do
 
 ### Installation (Unpacked)
 
-1. Open **chrome://extensions**
-2. Enable **Developer mode** (toggle top right)
-3. Click **Load unpacked**
-4. Select the extension folder
-5. Done. Pin the extension for quick access (optional)
+**Download:** [scrapi-v2.vercel.app/extension.zip](https://scrapi-v2.vercel.app/extension.zip)
+
+1. Download the `.zip` and extract it to a folder
+2. Open **chrome://extensions**
+3. Enable **Developer mode** (toggle top right)
+4. Click **Load unpacked**
+5. Select the extracted folder
+6. Done. Pin the extension for quick access (optional)
+
+Or if you prefer cloning the repo:
+
+```bash
+git clone https://github.com/zalazarc20/app-iptv.git
+```
+Then follow steps 2–6 above.
+
+#### Packaging as .zip
+
+Run the included `build.sh` to generate `extension.zip`:
+
+```bash
+bash build.sh
+```
+The zip excludes `.git/`, `build.sh`, and any existing `.zip` files. Useful for sharing or manual deployment.
 
 ### Usage
 
@@ -92,11 +111,30 @@ Olvídate de buscar URLs en el código fuente o en la pestaña de red. La extens
 
 ### Instalación (sin empaquetar)
 
-1. Abre **chrome://extensions**
-2. Activa **Modo desarrollador** (interruptor arriba a la derecha)
-3. Haz clic en **Cargar extensión sin empaquetar**
-4. Selecciona la carpeta de la extensión
-5. Listo. Fija la extensión para acceso rápido (opcional)
+**Descargar:** [scrapi-v2.vercel.app/extension.zip](https://scrapi-v2.vercel.app/extension.zip)
+
+1. Descargá el `.zip` y extraelo en una carpeta
+2. Abre **chrome://extensions**
+3. Activa **Modo desarrollador** (interruptor arriba a la derecha)
+4. Haz clic en **Cargar extensión sin empaquetar**
+5. Seleccioná la carpeta donde extrajiste el zip
+6. Listo. Fija la extensión para acceso rápido (opcional)
+
+O si preferís clonar el repo:
+
+```bash
+git clone https://github.com/zalazarc20/app-iptv.git
+```
+Luego seguí los pasos 2–6 de arriba.
+
+#### Empaquetar como .zip
+
+Corré el `build.sh` incluido para generar `extension.zip`:
+
+```bash
+bash build.sh
+```
+El zip excluye `.git/`, `build.sh` y cualquier `.zip` existente. Útil para compartir o distribución manual.
 
 ### Uso
 
