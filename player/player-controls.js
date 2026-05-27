@@ -9,6 +9,13 @@ const ICONS = {
   cast: '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M21 3H3c-1.1 0-2 .9-2 2v3h2V5h18v14h-7v2h7c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM1 18v3h3c0-1.66-1.34-3-3-3zm0-4v2c2.76 0 5 2.24 5 5h2c0-3.87-3.13-7-7-7zm0-4v2c4.97 0 9 4.03 9 9h2c0-6.08-4.93-11-11-11z"/></svg>',
   fullscreen: '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>',
   fullscreen_exit: '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"/></svg>',
+  chevron_right: '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>',
+  chevron_left: '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>',
+  check: '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>',
+  audio: '<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>',
+  subtitles: '<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4V6h16v12zM6 10h2v2H6zm0 4h8v2H6zm10 0h2v2h-2zm-6-4h8v2h-8z"/></svg>',
+  speed: '<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M20.38 8.57l-1.23 1.85a8 8 0 0 1-.22 7.58H5.07A8 8 0 0 1 15.58 6.85l1.85-1.23A10 10 0 0 0 3.35 19a2 2 0 0 0 1.72 1h13.85a2 2 0 0 0 1.74-1 10 10 0 0 0-.27-10.44zm-9.79 6.84a2 2 0 0 0 2.83 0l5.66-8.49-8.49 5.66a2 2 0 0 0 0 2.83z"/></svg>',
+  quality: '<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-8 12H9.5v-2h-2v2H6V9h1.5v2.5h2V9H11v6zm7-1c0 .55-.45 1-1 1h-.75v1.5h-1.5V15H14c-.55 0-1-.45-1-1v-4c0-.55.45-1 1-1h3c.55 0 1 .45 1 1v4zm-3.5-.5h2v-3h-2v3z"/></svg>',
 };
 
 class PlayerControls {
@@ -17,8 +24,16 @@ class PlayerControls {
     this.player = player;
     this.container = container;
     this.settingsOpen = false;
+    this.currentPanel = 'main'; // 'main', 'audio', 'subtitles', 'speed', 'quality'
     this.isSeeking = false;
     this._systemLang = (navigator.language || '').split('-')[0].toLowerCase();
+    
+    // Store current selections
+    this._currentAudio = null;
+    this._currentSubs = 'off';
+    this._currentSpeed = 1;
+    this._currentQuality = 'auto';
+    
     this.build();
     this.bindVideoEvents();
     this.bindControls();
@@ -50,22 +65,7 @@ class PlayerControls {
         </div>
       </div>
       <div class="settings-panel" id="settingsPanel" style="display:none">
-        <div class="settings-section">
-          <div class="settings-header">Quality</div>
-          <div class="settings-options" id="qualityOptions"></div>
-        </div>
-        <div class="settings-section">
-          <div class="settings-header">Audio</div>
-          <div class="settings-options" id="audioOptions"></div>
-        </div>
-        <div class="settings-section">
-          <div class="settings-header">Subtitles</div>
-          <div class="settings-options" id="subsOptions"></div>
-        </div>
-        <div class="settings-section">
-          <div class="settings-header">Speed</div>
-          <div class="settings-options" id="speedOptions"></div>
-        </div>
+        <div class="settings-panel-inner" id="settingsPanelInner"></div>
       </div>
     `;
 
@@ -80,12 +80,9 @@ class PlayerControls {
     this.volumeBar = this.container.querySelector('#volumeBar');
     this.settingsBtn = this.container.querySelector('#settingsBtn');
     this.settingsPanel = this.container.querySelector('#settingsPanel');
+    this.settingsPanelInner = this.container.querySelector('#settingsPanelInner');
     this.castBtn = this.container.querySelector('#castBtn');
     this.fullscreenBtn = this.container.querySelector('#fullscreenBtn');
-    this.qualityOptions = this.container.querySelector('#qualityOptions');
-    this.audioOptions = this.container.querySelector('#audioOptions');
-    this.subsOptions = this.container.querySelector('#subsOptions');
-    this.speedOptions = this.container.querySelector('#speedOptions');
 
     this.setupCast();
   }
@@ -144,6 +141,7 @@ class PlayerControls {
       e.stopPropagation();
       this.toggleSettings();
     });
+    
     document.addEventListener('click', (e) => {
       if (this.settingsOpen && !this.settingsPanel.contains(e.target) && e.target !== this.settingsBtn) {
         this.closeSettings();
@@ -225,175 +223,335 @@ class PlayerControls {
 
   openSettings() {
     this.settingsOpen = true;
+    this.currentPanel = 'main';
     this.settingsPanel.style.display = 'block';
-    this.populateSettings();
+    this.renderSettingsPanel();
     this.show();
   }
 
   closeSettings() {
     this.settingsOpen = false;
+    this.currentPanel = 'main';
     this.settingsPanel.style.display = 'none';
     this.startHideTimer();
   }
 
-  populateSettings() {
-    try { this.populateQuality(); } catch (e) { console.error('Quality error', e); this.qualityOptions.innerHTML = '<div class="settings-option disabled">N/A</div>'; }
-    try { this.populateAudio(); } catch (e) { console.error('Audio error', e); this.audioOptions.innerHTML = '<div class="settings-option disabled">N/A</div>'; }
-    try { this.populateSubs(); } catch (e) { console.error('Subs error', e); this.subsOptions.innerHTML = '<div class="settings-option disabled">N/A</div>'; }
-    try { this.populateSpeed(); } catch (e) { console.error('Speed error', e); }
+  renderSettingsPanel() {
+    if (this.currentPanel === 'main') {
+      this.renderMainMenu();
+    } else if (this.currentPanel === 'audio') {
+      this.renderAudioMenu();
+    } else if (this.currentPanel === 'subtitles') {
+      this.renderSubtitlesMenu();
+    } else if (this.currentPanel === 'speed') {
+      this.renderSpeedMenu();
+    } else if (this.currentPanel === 'quality') {
+      this.renderQualityMenu();
+    }
   }
 
-  populateQuality() {
-    if (!this.player || typeof this.player.getVariantTracks !== 'function') {
-      this.qualityOptions.innerHTML = '<div class="settings-option disabled">N/A</div>';
-      return;
-    }
-    let tracks;
-    try { tracks = this.player.getVariantTracks(); } catch (e) { tracks = []; }
-    this.qualityOptions.innerHTML = '<div class="settings-option" data-value="auto">Auto</div>';
-    let hasVideo = false;
-    (tracks || []).forEach(t => {
-      const h = t.height || 0;
-      if (!h) return;
-      hasVideo = true;
-      const label = h + 'p';
-      const opt = document.createElement('div');
-      opt.className = 'settings-option';
-      opt.textContent = label;
-      opt.addEventListener('click', (e) => { e.stopPropagation(); this.selectQuality(opt, h); });
-      this.qualityOptions.appendChild(opt);
+  renderMainMenu() {
+    const audioLabel = this._currentAudio ? this._currentAudio.toUpperCase() : 'N/A';
+    const subsLabel = this._currentSubs === 'off' ? 'Off' : this._currentSubs.toUpperCase();
+    const speedLabel = this._currentSpeed === 1 ? 'Normal' : `${this._currentSpeed}x`;
+    const qualityLabel = this._currentQuality === 'auto' ? 'Auto' : `${this._currentQuality}p`;
+
+    // Check what options are available
+    const hasAudio = this.getAudioTracks().length > 0;
+    const hasSubs = this.getSubtitleTracks().length > 0;
+
+    this.settingsPanelInner.innerHTML = `
+      ${hasAudio ? `
+      <div class="settings-menu-item" data-panel="audio">
+        <span class="settings-menu-icon">${ICONS.audio}</span>
+        <span class="settings-menu-label">Audio</span>
+        <span class="settings-menu-value">${audioLabel}</span>
+        <span class="settings-menu-arrow">${ICONS.chevron_right}</span>
+      </div>
+      ` : ''}
+      <div class="settings-menu-item" data-panel="subtitles">
+        <span class="settings-menu-icon">${ICONS.subtitles}</span>
+        <span class="settings-menu-label">Subtitles</span>
+        <span class="settings-menu-value">${hasSubs ? subsLabel : 'N/A'}</span>
+        <span class="settings-menu-arrow">${ICONS.chevron_right}</span>
+      </div>
+      <div class="settings-menu-item" data-panel="speed">
+        <span class="settings-menu-icon">${ICONS.speed}</span>
+        <span class="settings-menu-label">Speed</span>
+        <span class="settings-menu-value">${speedLabel}</span>
+        <span class="settings-menu-arrow">${ICONS.chevron_right}</span>
+      </div>
+      <div class="settings-menu-item" data-panel="quality">
+        <span class="settings-menu-icon">${ICONS.quality}</span>
+        <span class="settings-menu-label">Quality</span>
+        <span class="settings-menu-value">${qualityLabel}</span>
+        <span class="settings-menu-arrow">${ICONS.chevron_right}</span>
+      </div>
+    `;
+
+    this.settingsPanelInner.querySelectorAll('.settings-menu-item').forEach(item => {
+      item.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.currentPanel = item.dataset.panel;
+        this.renderSettingsPanel();
+      });
     });
-    if (!hasVideo) {
-      this.qualityOptions.innerHTML = '<div class="settings-option disabled">N/A</div>';
+  }
+
+  renderBackHeader(title) {
+    return `
+      <div class="settings-back-header" id="settingsBackBtn">
+        <span class="settings-back-icon">${ICONS.chevron_left}</span>
+        <span class="settings-back-title">${title}</span>
+      </div>
+    `;
+  }
+
+  bindBackButton() {
+    const backBtn = this.settingsPanelInner.querySelector('#settingsBackBtn');
+    if (backBtn) {
+      backBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.currentPanel = 'main';
+        this.renderSettingsPanel();
+      });
     }
   }
 
-  selectQuality(el, height) {
-    if (!this.player) return;
-    const opts = this.qualityOptions.querySelectorAll('.settings-option');
-    opts.forEach(o => o.classList.remove('active'));
-    el.classList.add('active');
+  getAudioTracks() {
+    if (!this.player || typeof this.player.getVariantTracks !== 'function') return [];
     try {
-      if (height === 'auto') {
-        this.player.configure({ abr: { enabled: true } });
-        return;
-      }
-      this.player.configure({ abr: { enabled: false } });
-      const tracks = this.player.getVariantTracks();
-      const match = tracks.filter(t => t.height === height);
-      if (match.length > 0) this.player.selectVariantTrack(match[0], true);
-    } catch (e) { console.error('selectQuality error', e); }
+      const tracks = this.player.getVariantTracks() || [];
+      const seen = new Set();
+      return tracks.filter(t => {
+        const lang = (t.language || '').toLowerCase();
+        if (!lang || seen.has(lang)) return false;
+        seen.add(lang);
+        return true;
+      });
+    } catch (e) {
+      return [];
+    }
   }
 
-  populateAudio() {
-    if (!this.player || typeof this.player.getVariantTracks !== 'function') {
-      this.audioOptions.innerHTML = '<div class="settings-option disabled">N/A</div>';
-      return;
+  getSubtitleTracks() {
+    if (!this.player || typeof this.player.getTextTracks !== 'function') return [];
+    try {
+      const tracks = this.player.getTextTracks() || [];
+      const seen = new Set();
+      return tracks.filter(t => {
+        const lang = (t.language || '').toLowerCase();
+        if (!lang || seen.has(lang)) return false;
+        seen.add(lang);
+        return true;
+      });
+    } catch (e) {
+      return [];
     }
-    let tracks;
-    try { tracks = this.player.getVariantTracks(); } catch (e) { tracks = []; }
-    const seen = new Set();
-    this.audioOptions.innerHTML = '';
-    let hasAudio = false;
-    (tracks || []).forEach(t => {
-      const lang = (t.language || '').toLowerCase();
-      if (!lang || seen.has(lang)) return;
-      hasAudio = true;
-      seen.add(lang);
-      const label = lang.toUpperCase();
-      const opt = document.createElement('div');
-      opt.className = 'settings-option';
-      if (lang === this._systemLang) {
-        opt.classList.add('active');
+  }
+
+  getQualityTracks() {
+    if (!this.player || typeof this.player.getVariantTracks !== 'function') return [];
+    try {
+      const tracks = this.player.getVariantTracks() || [];
+      const seen = new Set();
+      return tracks.filter(t => {
+        const h = t.height || 0;
+        if (!h || seen.has(h)) return false;
+        seen.add(h);
+        return true;
+      });
+    } catch (e) {
+      return [];
+    }
+  }
+
+  renderAudioMenu() {
+    const tracks = this.getAudioTracks();
+    
+    let html = this.renderBackHeader('Audio');
+    html += '<div class="settings-options-list">';
+    
+    if (tracks.length === 0) {
+      html += '<div class="settings-option-item disabled">No audio tracks available</div>';
+    } else {
+      tracks.forEach(t => {
+        const lang = (t.language || '').toLowerCase();
+        const label = lang.toUpperCase();
+        const isActive = this._currentAudio === lang;
+        html += `
+          <div class="settings-option-item ${isActive ? 'active' : ''}" data-lang="${lang}">
+            <span class="settings-option-check">${isActive ? ICONS.check : ''}</span>
+            <span class="settings-option-label">${label}</span>
+          </div>
+        `;
+      });
+    }
+    html += '</div>';
+    
+    this.settingsPanelInner.innerHTML = html;
+    this.bindBackButton();
+    
+    this.settingsPanelInner.querySelectorAll('.settings-option-item[data-lang]').forEach(item => {
+      item.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const lang = item.dataset.lang;
+        this._currentAudio = lang;
         try { this.player.selectAudioLanguage(lang); } catch (e) {}
-      }
-      opt.textContent = label;
-      opt.addEventListener('click', (e) => { e.stopPropagation(); this.selectAudio(opt, lang); });
-      this.audioOptions.appendChild(opt);
+        this.currentPanel = 'main';
+        this.renderSettingsPanel();
+      });
     });
-    if (!hasAudio) {
-      this.audioOptions.innerHTML = '<div class="settings-option disabled">N/A</div>';
-    }
   }
 
-  selectAudio(el, lang) {
-    if (!this.player) return;
-    this.audioOptions.querySelectorAll('.settings-option').forEach(o => o.classList.remove('active'));
-    el.classList.add('active');
-    try { this.player.selectAudioLanguage(lang); } catch (e) { console.error('selectAudio error', e); }
-  }
-
-  populateSubs() {
-    if (!this.player || typeof this.player.getTextTracks !== 'function') {
-      this.subsOptions.innerHTML = '<div class="settings-option" data-value="off">Off</div><div class="settings-option disabled">N/A</div>';
-      return;
+  renderSubtitlesMenu() {
+    const tracks = this.getSubtitleTracks();
+    
+    let html = this.renderBackHeader('Subtitles');
+    html += '<div class="settings-options-list">';
+    
+    // Off option
+    const offActive = this._currentSubs === 'off';
+    html += `
+      <div class="settings-option-item ${offActive ? 'active' : ''}" data-subs="off">
+        <span class="settings-option-check">${offActive ? ICONS.check : ''}</span>
+        <span class="settings-option-label">Off</span>
+      </div>
+    `;
+    
+    if (tracks.length === 0) {
+      html += '<div class="settings-option-item disabled">No subtitles available</div>';
+    } else {
+      tracks.forEach(t => {
+        const lang = (t.language || '').toLowerCase();
+        const label = lang.toUpperCase();
+        const isActive = this._currentSubs === lang;
+        html += `
+          <div class="settings-option-item ${isActive ? 'active' : ''}" data-subs="${lang}" data-track-id="${t.id || ''}">
+            <span class="settings-option-check">${isActive ? ICONS.check : ''}</span>
+            <span class="settings-option-label">${label}</span>
+          </div>
+        `;
+      });
     }
-    let tracks;
-    try { tracks = this.player.getTextTracks(); } catch (e) { tracks = []; }
-    this.subsOptions.innerHTML = '<div class="settings-option off-opt" data-value="off">Off</div>';
-    const offOpt = this.subsOptions.querySelector('.off-opt');
-    offOpt.addEventListener('click', (e) => { e.stopPropagation(); this.selectSubsOff(); });
-    if (!tracks || tracks.length === 0) {
-      this.subsOptions.innerHTML += '<div class="settings-option disabled">N/A</div>';
-      return;
-    }
-    const seen = new Set();
-    let hasText = false;
-    tracks.forEach(t => {
-      const lang = (t.language || '').toLowerCase();
-      if (!lang || seen.has(lang)) return;
-      hasText = true;
-      seen.add(lang);
-      const label = lang.toUpperCase();
-      const opt = document.createElement('div');
-      opt.className = 'settings-option';
-      if (lang === this._systemLang) {
-        opt.classList.add('active');
-        try { this.player.selectTextTrack(t); this.player.setTextTrackVisibility(true); } catch (e) {}
-      }
-      opt.textContent = label;
-      opt.addEventListener('click', (e) => { e.stopPropagation(); this.selectSubs(opt, t); });
-      this.subsOptions.appendChild(opt);
+    html += '</div>';
+    
+    this.settingsPanelInner.innerHTML = html;
+    this.bindBackButton();
+    
+    this.settingsPanelInner.querySelectorAll('.settings-option-item[data-subs]').forEach(item => {
+      item.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const subs = item.dataset.subs;
+        this._currentSubs = subs;
+        if (subs === 'off') {
+          try { this.player.setTextTrackVisibility(false); } catch (e) {}
+        } else {
+          const tracks = this.getSubtitleTracks();
+          const track = tracks.find(t => (t.language || '').toLowerCase() === subs);
+          if (track) {
+            try {
+              this.player.selectTextTrack(track);
+              this.player.setTextTrackVisibility(true);
+            } catch (e) {}
+          }
+        }
+        this.currentPanel = 'main';
+        this.renderSettingsPanel();
+      });
     });
-    if (!hasText) {
-      this.subsOptions.innerHTML += '<div class="settings-option disabled">N/A</div>';
-    }
   }
 
-  selectSubsOff() {
-    if (!this.player) return;
-    this.subsOptions.querySelectorAll('.settings-option').forEach(o => o.classList.remove('active'));
-    document.querySelector('#subsOptions .off-opt').classList.add('active');
-    try { this.player.setTextTrackVisibility(false); } catch (e) {}
-  }
-
-  selectSubs(el, track) {
-    if (!this.player) return;
-    this.subsOptions.querySelectorAll('.settings-option').forEach(o => o.classList.remove('active'));
-    el.classList.add('active');
-    try {
-      this.player.selectTextTrack(track);
-      this.player.setTextTrackVisibility(true);
-    } catch (e) { console.error('selectSubs error', e); }
-  }
-
-  populateSpeed() {
+  renderSpeedMenu() {
     const speeds = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 2];
-    const current = this.video.playbackRate;
-    this.speedOptions.innerHTML = '';
+    
+    let html = this.renderBackHeader('Speed');
+    html += '<div class="settings-options-list">';
+    
     speeds.forEach(s => {
-      const opt = document.createElement('div');
-      opt.className = 'settings-option' + (s === current ? ' active' : '');
-      opt.textContent = s === 1 ? 'Normal' : `${s}x`;
-      opt.addEventListener('click', (e) => { e.stopPropagation(); this.selectSpeed(opt, s); });
-      this.speedOptions.appendChild(opt);
+      const isActive = this._currentSpeed === s;
+      const label = s === 1 ? 'Normal' : `${s}x`;
+      html += `
+        <div class="settings-option-item ${isActive ? 'active' : ''}" data-speed="${s}">
+          <span class="settings-option-check">${isActive ? ICONS.check : ''}</span>
+          <span class="settings-option-label">${label}</span>
+        </div>
+      `;
+    });
+    html += '</div>';
+    
+    this.settingsPanelInner.innerHTML = html;
+    this.bindBackButton();
+    
+    this.settingsPanelInner.querySelectorAll('.settings-option-item[data-speed]').forEach(item => {
+      item.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const speed = parseFloat(item.dataset.speed);
+        this._currentSpeed = speed;
+        try { this.video.playbackRate = speed; } catch (e) {}
+        this.currentPanel = 'main';
+        this.renderSettingsPanel();
+      });
     });
   }
 
-  selectSpeed(el, speed) {
-    this.speedOptions.querySelectorAll('.settings-option').forEach(o => o.classList.remove('active'));
-    el.classList.add('active');
-    try { this.video.playbackRate = speed; } catch (e) { console.error('selectSpeed error', e); }
+  renderQualityMenu() {
+    const tracks = this.getQualityTracks();
+    
+    let html = this.renderBackHeader('Quality');
+    html += '<div class="settings-options-list">';
+    
+    // Auto option
+    const autoActive = this._currentQuality === 'auto';
+    html += `
+      <div class="settings-option-item ${autoActive ? 'active' : ''}" data-quality="auto">
+        <span class="settings-option-check">${autoActive ? ICONS.check : ''}</span>
+        <span class="settings-option-label">Auto</span>
+      </div>
+    `;
+    
+    if (tracks.length === 0) {
+      html += '<div class="settings-option-item disabled">No quality options</div>';
+    } else {
+      // Sort by height descending
+      const sorted = [...tracks].sort((a, b) => (b.height || 0) - (a.height || 0));
+      sorted.forEach(t => {
+        const h = t.height || 0;
+        const isActive = this._currentQuality === h;
+        html += `
+          <div class="settings-option-item ${isActive ? 'active' : ''}" data-quality="${h}">
+            <span class="settings-option-check">${isActive ? ICONS.check : ''}</span>
+            <span class="settings-option-label">${h}p</span>
+          </div>
+        `;
+      });
+    }
+    html += '</div>';
+    
+    this.settingsPanelInner.innerHTML = html;
+    this.bindBackButton();
+    
+    this.settingsPanelInner.querySelectorAll('.settings-option-item[data-quality]').forEach(item => {
+      item.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const quality = item.dataset.quality;
+        if (quality === 'auto') {
+          this._currentQuality = 'auto';
+          try { this.player.configure({ abr: { enabled: true } }); } catch (e) {}
+        } else {
+          const h = parseInt(quality);
+          this._currentQuality = h;
+          try {
+            this.player.configure({ abr: { enabled: false } });
+            const tracks = this.player.getVariantTracks();
+            const match = tracks.filter(t => t.height === h);
+            if (match.length > 0) this.player.selectVariantTrack(match[0], true);
+          } catch (e) {}
+        }
+        this.currentPanel = 'main';
+        this.renderSettingsPanel();
+      });
+    });
   }
 
   updateFullscreenIcon() {
@@ -421,7 +579,13 @@ class PlayerControls {
   }
 
   updateTracks() {
-    this.populateSettings();
+    // Update current selections based on player state
+    const audioTracks = this.getAudioTracks();
+    if (audioTracks.length > 0 && !this._currentAudio) {
+      // Find active or set to system language
+      const systemTrack = audioTracks.find(t => (t.language || '').toLowerCase() === this._systemLang);
+      this._currentAudio = systemTrack ? this._systemLang : (audioTracks[0].language || '').toLowerCase();
+    }
   }
 
   destroy() {

@@ -111,6 +111,35 @@ function parseEPGText(xmlText) {
   const lines = xmlText.split('\n');
   let current = null;
 
+  // Funcion para decodificar entidades HTML
+  function decodeHTMLEntities(text) {
+    if (!text) return '';
+    return text
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&apos;/g, "'")
+      .replace(/&#(\d+);/g, (match, dec) => String.fromCharCode(dec))
+      .replace(/&#x([0-9A-Fa-f]+);/g, (match, hex) => String.fromCharCode(parseInt(hex, 16)))
+      // Caracteres especiales comunes mal codificados
+      .replace(/Â¿/g, '¿')
+      .replace(/Â¡/g, '¡')
+      .replace(/Ã¡/g, 'á')
+      .replace(/Ã©/g, 'é')
+      .replace(/Ã­/g, 'í')
+      .replace(/Ã³/g, 'ó')
+      .replace(/Ãº/g, 'ú')
+      .replace(/Ã±/g, 'ñ')
+      .replace(/Ã'/g, 'Ñ')
+      .replace(/Ã¼/g, 'ü')
+      .replace(/Ã/g, 'Á')
+      .replace(/Ã‰/g, 'É')
+      .replace(/Ã/g, 'Í')
+      .replace(/Ã"/g, 'Ó')
+      .replace(/Ãš/g, 'Ú');
+  }
+
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
 
@@ -119,16 +148,16 @@ function parseEPGText(xmlText) {
       const ch = line.match(/channel\s*=\s*["']([^"']+)["']/);
       const st = line.match(/start\s*=\s*["']([^"']+)["']/);
       const sp = line.match(/stop\s*=\s*["']([^"']+)["']/);
-      if (ch) current.channel = ch[1].replace(/&amp;/g, '&');
+      if (ch) current.channel = decodeHTMLEntities(ch[1]);
       if (st) current.start = st[1];
       if (sp) current.stop = sp[1];
     }
 
     if (current) {
       const titleMatch = line.match(/<title[^>]*>(.*?)<\/title>/);
-      if (titleMatch) current.title = titleMatch[1].trim();
+      if (titleMatch) current.title = decodeHTMLEntities(titleMatch[1].trim());
       const descMatch = line.match(/<desc[^>]*>(.*?)<\/desc>/);
-      if (descMatch) current.desc = descMatch[1].trim();
+      if (descMatch) current.desc = decodeHTMLEntities(descMatch[1].trim());
     }
 
     if (line.includes('</programme>') && current) {
@@ -152,6 +181,7 @@ async function parseEPG(url) {
 
     const header = new Uint8Array(buffer.slice(0, 2));
     if (header[0] === 0x1f && header[1] === 0x8b) {
+      // GZIP compressed
       const ds = new DecompressionStream('gzip');
       const writer = ds.writable.getWriter();
       writer.write(new Uint8Array(buffer));
@@ -172,7 +202,22 @@ async function parseEPG(url) {
       }
       text = new TextDecoder('utf-8').decode(combined);
     } else {
-      text = new TextDecoder('utf-8').decode(buffer);
+      // Intentar detectar encoding del XML
+      const preview = new TextDecoder('utf-8').decode(buffer.slice(0, 500));
+      const encodingMatch = preview.match(/encoding\s*=\s*["']([^"']+)["']/i);
+      let encoding = 'utf-8';
+      if (encodingMatch) {
+        encoding = encodingMatch[1].toLowerCase();
+        // Mapear encodings comunes
+        if (encoding === 'iso-8859-1' || encoding === 'latin1' || encoding === 'latin-1') {
+          encoding = 'iso-8859-1';
+        }
+      }
+      try {
+        text = new TextDecoder(encoding).decode(buffer);
+      } catch (e) {
+        text = new TextDecoder('utf-8').decode(buffer);
+      }
     }
 
     const programmes = parseEPGText(text);
