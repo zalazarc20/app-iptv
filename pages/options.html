@@ -1,11 +1,17 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Stream Sniffer Options</title>
   <style>
-    * { margin:0; padding:0; box-sizing:border-box; }
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
     body {
       font-family: 'Segoe UI', Tahoma, sans-serif;
       background: #1a1a2e;
@@ -14,36 +20,87 @@
       max-width: 600px;
       margin: 0 auto;
     }
-    h1 { color: #2ecc71; font-size: 22px; margin-bottom: 24px; }
-    h2 { color: #b0b0c8; font-size: 16px; margin-bottom: 12px; margin-top: 20px; }
+
+    h1 {
+      color: #2ecc71;
+      font-size: 22px;
+      margin-bottom: 24px;
+    }
+
+    h2 {
+      color: #b0b0c8;
+      font-size: 16px;
+      margin-bottom: 12px;
+      margin-top: 20px;
+    }
+
     .section {
       background: #16213e;
       padding: 16px;
       border-radius: 6px;
       margin-bottom: 12px;
     }
+
     .row {
       display: flex;
       justify-content: space-between;
       align-items: center;
       padding: 8px 0;
     }
-    .row label { font-size: 14px; color: #b0b0c8; }
+
+    .row label {
+      font-size: 14px;
+      color: #b0b0c8;
+    }
+
     .switch {
-      position: relative; display: inline-block; width: 36px; height: 20px;
+      position: relative;
+      display: inline-block;
+      width: 36px;
+      height: 20px;
     }
-    .switch input { opacity:0; width:0; height:0; }
+
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
     .slider {
-      position: absolute; cursor:pointer; top:0; left:0; right:0; bottom:0;
-      background: #444; transition:0.3s; border-radius:20px;
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: #444;
+      transition: 0.3s;
+      border-radius: 20px;
     }
+
     .slider:before {
-      position:absolute; content:''; height:16px; width:16px; left:2px; bottom:2px;
-      background:#fff; transition:0.3s; border-radius:50%;
+      position: absolute;
+      content: '';
+      height: 16px;
+      width: 16px;
+      left: 2px;
+      bottom: 2px;
+      background: #fff;
+      transition: 0.3s;
+      border-radius: 50%;
     }
-    .switch input:checked + .slider { background:#2ecc71; }
-    .switch input:checked + .slider:before { transform:translateX(16px); }
-    select, textarea, input[type="text"] {
+
+    .switch input:checked+.slider {
+      background: #2ecc71;
+    }
+
+    .switch input:checked+.slider:before {
+      transform: translateX(16px);
+    }
+
+    select,
+    textarea,
+    input[type="text"] {
       background: #0f3460;
       color: #eaeaea;
       border: 1px solid #2d2d5e;
@@ -53,9 +110,25 @@
       outline: none;
       width: 100%;
     }
-    select:focus, textarea:focus, input:focus { border-color: #2ecc71; }
-    textarea { resize: vertical; min-height: 60px; font-family: monospace; }
-    .desc { font-size: 12px; color: #7f8c8d; margin-top: 4px; }
+
+    select:focus,
+    textarea:focus,
+    input:focus {
+      border-color: #2ecc71;
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 60px;
+      font-family: monospace;
+    }
+
+    .desc {
+      font-size: 12px;
+      color: #7f8c8d;
+      margin-top: 4px;
+    }
+
     .btn {
       padding: 8px 16px;
       border: none;
@@ -66,10 +139,19 @@
       background: #2ecc71;
       color: #111;
     }
-    .btn:hover { background: #27ae60; }
-    .actions { margin-top: 20px; display: flex; gap: 10px; }
+
+    .btn:hover {
+      background: #27ae60;
+    }
+
+    .actions {
+      margin-top: 20px;
+      display: flex;
+      gap: 10px;
+    }
   </style>
 </head>
+
 <body>
   <h1>Stream Sniffer Options</h1>
 
@@ -110,13 +192,13 @@
     <h2>Keyboard Shortcuts</h2>
     <div class="row">
       <label>Toggle extension popup</label>
-      <span style="color:#b0b0c8;font-size:12px;">Alt+Shift+S</span>
+      <span class="kbd">Alt+Shift+S</span>
     </div>
   </div>
 
   <div class="actions">
-    <button id="saveBtn" class="btn">Save Settings</button>
-    <button id="resetBtn" class="btn" style="background:#7f8c8d;">Reset Defaults</button>
+    <button id="saveBtn" class="btn btn-primary">Save Settings</button>
+    <button id="resetBtn" class="btn btn-secondary">Reset Defaults</button>
   </div>
 
   <script type="module">
@@ -173,4 +255,5 @@
     document.getElementById('resetBtn').addEventListener('click', reset);
   </script>
 </body>
+
 </html>

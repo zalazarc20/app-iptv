@@ -5,74 +5,87 @@
 }
 
 body {
-  width: 480px;
-  font-family: 'Segoe UI', Tahoma, sans-serif;
-  background: #1a1a2e;
+  width: 420px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  background: rgba(18, 18, 22, 0.98);
   color: #eaeaea;
   font-size: 13px;
   user-select: none;
 }
 
 .container {
-  padding: 14px 16px;
+  padding: 16px;
 }
 
+/* Header */
 .header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 12px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid #2d2d5e;
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .title {
-  font-size: 16px;
-  font-weight: bold;
-  color: #2ecc71;
+  font-size: 15px;
+  font-weight: 600;
+  color: #fff;
 }
 
 .header-buttons {
   display: flex;
-  gap: 4px;
+  gap: 6px;
 }
 
+/* Toggle Section */
 .toggles {
   display: flex;
-  gap: 12px;
+  gap: 14px;
   align-items: center;
   flex-wrap: wrap;
-  margin-bottom: 12px;
-  padding: 8px 10px;
-  background: #16213e;
-  border-radius: 6px;
+  margin-bottom: 14px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .toggle-label {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   font-size: 12px;
-  font-weight: 600;
-  color: #b0b0c8;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.7);
 }
 
 .select-sm {
-  background: #0f3460;
-  color: #eaeaea;
-  border: 1px solid #2ecc71;
-  border-radius: 3px;
-  padding: 2px 4px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  padding: 4px 8px;
   font-size: 11px;
   outline: none;
   cursor: pointer;
+  transition: all 0.2s ease;
 }
 
+.select-sm:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.select-sm:focus {
+  border-color: #3ea6ff;
+}
+
+/* Switch Toggle */
 .switch {
   position: relative;
   display: inline-block;
-  width: 32px;
-  height: 18px;
+  width: 36px;
+  height: 20px;
 }
 
 .switch input {
@@ -88,149 +101,183 @@ body {
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: #444;
-  transition: 0.3s;
-  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.15);
+  transition: 0.25s ease;
+  border-radius: 20px;
 }
 
 .slider:before {
   position: absolute;
   content: '';
-  height: 14px;
-  width: 14px;
+  height: 16px;
+  width: 16px;
   left: 2px;
   bottom: 2px;
-  background-color: #fff;
-  transition: 0.3s;
+  background: #fff;
+  transition: 0.25s ease;
   border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
 .switch input:checked + .slider {
-  background-color: #2ecc71;
+  background: #3ea6ff;
 }
 
 .switch input:checked + .slider:before {
-  transform: translateX(14px);
+  transform: translateX(16px);
 }
 
+/* Info Section */
 .info-section {
-  margin-bottom: 12px;
+  margin-bottom: 14px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .info-row {
-  padding: 4px 0;
+  padding: 6px 0;
   display: flex;
   align-items: baseline;
-  gap: 6px;
+  gap: 8px;
   word-break: break-all;
+}
+
+.info-row + .info-row {
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+  padding-top: 8px;
+  margin-top: 2px;
 }
 
 .info-label {
   font-weight: 600;
-  color: #2ecc71;
+  color: #3ea6ff;
   min-width: 40px;
   flex-shrink: 0;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
 }
 
 .count-badge {
-  display: inline-block;
-  background: #f39c12;
-  color: #1a1a2e;
-  padding: 0 6px;
-  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(62, 166, 255, 0.2);
+  color: #3ea6ff;
+  padding: 2px 8px;
+  border-radius: 10px;
   font-size: 11px;
-  font-weight: bold;
-  margin-right: 4px;
+  font-weight: 600;
   flex-shrink: 0;
 }
 
 a {
-  color: #3498db;
+  color: rgba(255, 255, 255, 0.8);
   text-decoration: none;
+  font-size: 12px;
+  transition: color 0.15s ease;
 }
 
 a:hover {
-  color: #2ecc71;
-  text-decoration: underline;
+  color: #3ea6ff;
 }
 
+/* Actions */
 .actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 8px;
-  padding-top: 10px;
-  border-top: 1px solid #2d2d5e;
+  gap: 8px;
+  margin-bottom: 12px;
 }
 
 .btn {
-  padding: 6px 12px;
+  padding: 8px 14px;
   border: none;
-  border-radius: 4px;
+  border-radius: 8px;
   cursor: pointer;
   font-size: 12px;
-  font-weight: 600;
-  transition: background 0.2s;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn:active {
+  transform: scale(0.97);
 }
 
 .btn-sm {
-  padding: 3px 8px;
+  padding: 6px 10px;
   font-size: 14px;
-  background: #16213e;
-  color: #b0b0c8;
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.7);
+  border-radius: 8px;
 }
 
 .btn-sm:hover {
-  background: #0f3460;
+  background: rgba(255, 255, 255, 0.1);
   color: #fff;
 }
 
 .btn-play {
-  background: #2ecc71;
-  color: #1a1a2e;
+  background: #3ea6ff;
+  color: #000;
+  font-weight: 600;
 }
 
 .btn-play:hover {
-  background: #27ae60;
+  background: #5ab8ff;
 }
 
 .btn-copy {
-  background: #7f8c8d;
-  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.8);
 }
 
 .btn-copy:hover {
-  background: #636e72;
-}
-
-.btn-iptv {
-  background: #9b59b6;
+  background: rgba(255, 255, 255, 0.12);
   color: #fff;
 }
 
-.btn-iptv:hover {
-  background: #8e44ad;
+.btn-iptv {
+  background: rgba(155, 89, 182, 0.2);
+  color: #c39bd3;
+  border: 1px solid rgba(155, 89, 182, 0.3);
 }
 
+.btn-iptv:hover {
+  background: rgba(155, 89, 182, 0.3);
+  color: #d7bde2;
+}
+
+/* IPTV Section */
 .iptv-section {
   display: flex;
-  gap: 6px;
-  margin-top: 8px;
-  padding-top: 10px;
-  border-top: 1px solid #2d2d5e;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .iptv-url-input {
   flex: 1;
-  padding: 6px 10px;
-  border: 1px solid #2d2d5e;
-  border-radius: 4px;
-  background: #16213e;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
   color: #eaeaea;
   font-size: 12px;
   outline: none;
+  transition: all 0.2s ease;
+}
+
+.iptv-url-input::placeholder {
+  color: rgba(255, 255, 255, 0.3);
 }
 
 .iptv-url-input:focus {
-  border-color: #9b59b6;
+  border-color: rgba(155, 89, 182, 0.5);
+  background: rgba(255, 255, 255, 0.06);
 }
