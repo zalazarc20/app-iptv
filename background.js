@@ -77,6 +77,50 @@ async function updateNetRules(mpdEnabled) {
   } catch (e) {}
 }
 
+const CLEARKEY_SOURCES = [
+  {
+    name: 'cvattv',
+    match: (url) => {
+      try {
+        const u = new URL(url);
+        if (!u.hostname.endsWith('cvattv.com.ar')) return null;
+        const mpdFile = u.pathname.split('/').filter(Boolean).find(p => p.endsWith('.mpd'));
+        if (!mpdFile) return null;
+        return { channel: mpdFile.replace('.mpd', '') };
+      } catch (e) { return null; }
+    },
+    buildUrl: (match) => `https://zonatv.store/cvatt.html?get=${btoa(match.channel)}`,
+    parse: async (url) => {
+      try {
+        const resp = await fetch(url);
+        const text = await resp.text();
+        const kid = text.match(/keyId\s*=\s*["']([a-fA-F0-9-]+)["']/);
+        const key = text.match(/\bkey\s*=\s*["']([a-fA-F0-9-]+)["']/);
+        if (kid && key) {
+          const ck = {};
+          ck[kid[1].replace(/-/g, '').toLowerCase()] = key[1].replace(/-/g, '').toLowerCase();
+          return ck;
+        }
+        const colon = text.match(/([a-fA-F0-9]{32})\s*:\s*([a-fA-F0-9]{32})/);
+        if (colon) return { [colon[1].toLowerCase()]: colon[2].toLowerCase() };
+      } catch (e) {}
+      return null;
+    }
+  }
+];
+
+async function detectAndFetchClearkey(mediaUrl) {
+  if (getMediaType(mediaUrl) !== 'mpd') return null;
+  for (const src of CLEARKEY_SOURCES) {
+    const match = src.match(mediaUrl);
+    if (match) {
+      const clearkeyUrl = src.buildUrl(match);
+      return await src.parse(clearkeyUrl);
+    }
+  }
+  return null;
+}
+
 async function handleDetectedMedia(tabId, tabObj, mediaUrl) {
   if (tabId <= 0 || !tabObj) return;
   if (tabObj.discarded || tabObj.status === 'unloaded') return;
@@ -122,9 +166,14 @@ async function checkAutoPlay(tabId, tabObj, mediaUrl) {
         d && tabObj.url.toLowerCase().includes(d.toLowerCase())
       ));
   if (autoPlay) {
+    let clearkey = null;
+    const tabCtx = activeTabMedia[tabId];
+    if (tabCtx && tabCtx.clearkeyForUrl && tabCtx.clearkeyForUrl[mediaUrl]) {
+      clearkey = tabCtx.clearkeyForUrl[mediaUrl];
+    }
     const pUrl = getMediaType(mediaUrl) === 'm3u'
       ? getIPTVPlayerUrl(mediaUrl)
-      : getPlayerUrl(tabObj.url, mediaUrl);
+      : getPlayerUrl(tabObj.url, mediaUrl, clearkey);
     try {
       await chrome.tabs.update(tabId, { url: pUrl });
     } catch (e) {}
@@ -154,16 +203,23 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       })();
       return true;
     case 'openPlayer':
-      const pUrl = message.mediaType === 'm3u'
-        ? getIPTVPlayerUrl(message.mediaUrl)
-        : getPlayerUrl(message.siteUrl, message.mediaUrl, message.clearkey);
-      if (message.newTab) {
-        chrome.tabs.create({ url: pUrl, active: true });
-      } else if (message.newWindow) {
-        chrome.windows.create({ url: pUrl, focused: true });
-      } else {
-        chrome.tabs.update(sender.tab?.id, { url: pUrl });
-      }
+      (async () => {
+        let clearkey = message.clearkey;
+        if (!clearkey && sender.tab && activeTabMedia[sender.tab.id]) {
+          const stored = activeTabMedia[sender.tab.id].clearkeyForUrl;
+          if (stored && stored[message.mediaUrl]) clearkey = stored[message.mediaUrl];
+        }
+        const pUrl = message.mediaType === 'm3u'
+          ? getIPTVPlayerUrl(message.mediaUrl)
+          : getPlayerUrl(message.siteUrl, message.mediaUrl, clearkey);
+        if (message.newTab) {
+          chrome.tabs.create({ url: pUrl, active: true });
+        } else if (message.newWindow) {
+          chrome.windows.create({ url: pUrl, focused: true });
+        } else {
+          chrome.tabs.update(sender.tab?.id, { url: pUrl });
+        }
+      })();
       sendResponse({});
       break;
   }
@@ -203,6 +259,15 @@ chrome.webRequest.onBeforeRequest.addListener(
     if (!tabCtx.firstMedia) {
       tabCtx.firstMedia = url;
       tabCtx.firstMediaType = mediaType;
+    }
+
+    if (mediaType === 'mpd' && details.type !== 'main_frame') {
+      detectAndFetchClearkey(url).then(clearkey => {
+        if (clearkey) {
+          tabCtx.clearkeyForUrl = tabCtx.clearkeyForUrl || {};
+          tabCtx.clearkeyForUrl[url] = clearkey;
+        }
+      });
     }
 
     if (details.type !== 'main_frame') {

@@ -246,6 +246,11 @@ function playWithHlsjs(url) {
     return;
   }
 
+  const controlsContainer = document.getElementById('customControlsContainer');
+  if (controlsContainer && typeof PlayerControls !== 'undefined' && !playerControls) {
+    playerControls = new PlayerControls(video, null, controlsContainer);
+  }
+
   loadingOverlay.style.display = 'flex';
   hlsInstance = new Hls({
     enableWorker: true,
@@ -278,6 +283,11 @@ function playWithHlsjs(url) {
 }
 
 function playDirectMp4(url) {
+  const controlsContainer = document.getElementById('customControlsContainer');
+  if (controlsContainer && typeof PlayerControls !== 'undefined' && !playerControls) {
+    playerControls = new PlayerControls(video, null, controlsContainer);
+  }
+
   loadingOverlay.style.display = 'flex';
   video.src = url;
   video.addEventListener('loadedmetadata', () => {
