@@ -1,0 +1,96 @@
+#streamSnifferOverlay {
+  position: fixed;
+  font-size: 14px;
+  word-break: break-all;
+  text-align: left;
+  top: 0;
+  left: 0;
+  right: 0;
+  margin: 4px 8px;
+  z-index: 2147483647;
+  background: rgba(30, 30, 30, 0.95);
+  padding: 8px 12px;
+  line-height: 1.6;
+  border: 2px solid #2ecc71;
+  color: #ecf0f1;
+  font-family: 'Segoe UI', Tahoma, sans-serif;
+  border-radius: 6px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+  display: none;
+  backdrop-filter: blur(4px);
+}
+
+#streamSnifferOverlay .ss-title {
+  color: #2ecc71;
+  font-weight: bold;
+  font-size: 15px;
+  margin-right: 10px;
+}
+
+#streamSnifferOverlay .ss-count {
+  color: #f39c12;
+  font-weight: bold;
+}
+
+#streamSnifferOverlay .ss-link {
+  color: #3498db;
+  text-decoration: none;
+  font-size: 13px;
+}
+
+#streamSnifferOverlay .ss-link:hover {
+  color: #2ecc71;
+  text-decoration: underline;
+}
+
+#streamSnifferOverlay .ss-badge {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: bold;
+  text-transform: uppercase;
+  margin-right: 4px;
+}
+
+#streamSnifferOverlay .ss-badge-m3u8 { background: #e74c3c; color: #fff; }
+#streamSnifferOverlay .ss-badge-mpd { background: #9b59b6; color: #fff; }
+#streamSnifferOverlay .ss-badge-m3u { background: #e67e22; color: #fff; }
+#streamSnifferOverlay .ss-badge-mp4 { background: #3498db; color: #fff; }
+
+#streamSnifferOverlay .ss-btn {
+  display: inline-block;
+  padding: 2px 10px;
+  margin: 0 2px;
+  border-radius: 3px;
+  font-size: 12px;
+  font-weight: bold;
+  cursor: pointer;
+  border: none;
+  color: #fff;
+  text-decoration: none;
+  background: #2ecc71;
+  transition: background 0.2s;
+}
+
+#streamSnifferOverlay .ss-btn:hover { background: #27ae60; }
+#streamSnifferOverlay .ss-btn-close { background: #e74c3c; }
+#streamSnifferOverlay .ss-btn-close:hover { background: #c0392b; }
+#streamSnifferOverlay .ss-btn-copy { background: #7f8c8d; }
+#streamSnifferOverlay .ss-btn-copy:hover { background: #636e72; }
+#streamSnifferOverlay .ss-btn-play { background: #2ecc71; }
+
+#streamSnifferOverlay .ss-buttons {
+  float: right;
+}
+
+#streamSnifferOverlay .ss-type-select {
+  background: #34495e;
+  color: #fff;
+  border: 1px solid #2ecc71;
+  border-radius: 3px;
+  padding: 2px 4px;
+  font-size: 12px;
+  outline: none;
+  cursor: pointer;
+}

@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Stream Sniffer</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <span class="title">Stream Sniffer + Player</span>
+      <div class="header-buttons">
+        <button id="settingsBtn" class="btn btn-sm" title="Settings">⚙</button>
+        <button id="refreshBtn" class="btn btn-sm" title="Refresh">↻</button>
+      </div>
+    </div>
+
+    <div class="toggles">
+      <label class="toggle-label" title="Enable/Disable sniffing">
+        Sniffing:
+        <label class="switch"><input type="checkbox" id="sniffingEnabled"><span class="slider"></span></label>
+      </label>
+      <label class="toggle-label" title="Enable/Disable overlay on pages">
+        Overlay:
+        <label class="switch"><input type="checkbox" id="overlayEnabled"><span class="slider"></span></label>
+      </label>
+      <label class="toggle-label" title="Auto-play detected media">
+        Auto Play:
+        <select id="autoPlayEnabled" class="select-sm">
+          <option value="None">Off</option>
+          <option value="All">All</option>
+          <option value="Match">Match</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="info-section">
+      <div class="info-row">
+        <span class="info-label">Site:</span>
+        <a id="siteUrlLink" href="#" target="_blank"><span id="siteUrl">Loading...</span></a>
+      </div>
+      <div class="info-row">
+        <span class="info-label">First:</span>
+        <a id="firstLink" href="#" target="_blank"><span id="firstMedia">No media detected</span></a>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Last:</span>
+        <span id="countBadge" class="count-badge"></span>
+        <a id="lastLink" href="#" target="_blank"><span id="lastMedia">No media detected</span></a>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button id="playFirstBtn" class="btn btn-play">▶ Play First</button>
+      <button id="playLastBtn" class="btn btn-play">▶ Play Last</button>
+      <button id="copyFirstBtn" class="btn btn-copy">📋 Copy First</button>
+      <button id="copyLastBtn" class="btn btn-copy">📋 Copy Last</button>
+      <button id="openIPTVBtn" class="btn btn-iptv">📺 Open IPTV Player</button>
+    </div>
+    <div class="iptv-section">
+      <input type="text" id="playlistUrlInput" placeholder="Paste M3U URL..." class="iptv-url-input">
+      <button id="loadPlaylistBtn" class="btn btn-iptv">Load</button>
+    </div>
+  </div>
+  <script type="module" src="popup.js"></script>
+</body>
+</html>

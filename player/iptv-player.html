@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>IPTV Player</title>
+  <link rel="stylesheet" href="iptv-player.css">
+  <link rel="stylesheet" href="player-controls.css">
+</head>
+<body>
+  <div class="app">
+    <div class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <h2>Channels</h2>
+        <div class="sidebar-controls">
+          <input type="text" id="searchInput" placeholder="Search channels..." class="search-input">
+          <button id="loadPlaylistBtn" class="btn btn-sm" title="Load M3U file">📂</button>
+        </div>
+      </div>
+      <div id="channelList" class="channel-list">
+        <div class="empty-state">
+          <p>Load an M3U playlist to start watching</p>
+          <p class="hint">Enter a URL with #URL or use the file button</p>
+        </div>
+      </div>
+      <div class="sidebar-footer">
+        <div class="footer-info">
+          <span id="channelCount">0 channels</span>
+          <span id="epgStatus" class="epg-status"></span>
+        </div>
+        <button id="settingsBtn" class="btn btn-sm">⚙</button>
+      </div>
+    </div>
+    <div class="main-content">
+      <div id="playerContainer">
+        <div id="loadingOverlay" class="loading-overlay" style="display:none;">
+          <div class="spinner"></div>
+          <span class="loading-text">Loading playlist...</span>
+        </div>
+        <video id="video" autoplay crossorigin="anonymous"></video>
+        <div id="customControlsContainer"></div>
+        <div id="epgPanel" class="epg-panel" style="display:none;">
+          <div class="epg-header">
+            <span id="epgTitle">Now Playing</span>
+            <button id="epgCloseBtn" class="btn btn-xs">✕</button>
+          </div>
+          <div id="epgContent" class="epg-content"></div>
+        </div>
+        <div id="errorOverlay" class="video-overlay" style="display:none;">
+          <div class="error-content">
+            <span id="errorMessage" class="error-message"></span>
+            <button id="errorCloseBtn" class="btn btn-xs">✕</button>
+          </div>
+        </div>
+        <div id="startScreen" class="start-screen">
+          <div class="start-content">
+            <h1>📺 IPTV Player</h1>
+            <p>Load an M3U playlist to get started</p>
+            <div class="start-actions">
+              <button id="loadFileBtn" class="btn btn-lg">📂 Load M3U File</button>
+              <p class="or">or</p>
+              <div class="url-input-group">
+                <input type="text" id="playlistUrlInput" placeholder="Paste M3U URL here..." class="url-input">
+                <button id="loadUrlBtn" class="btn btn-lg">Load</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script src="/js/hls.min.js"></script>
+  <script src="/js/shaka-player.compiled.js"></script>
+  <script src="player-controls.js"></script>
+  <script src="iptv-player.js"></script>
+</body>
+</html>

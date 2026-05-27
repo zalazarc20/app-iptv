@@ -1,0 +1,58 @@
+{
+  "manifest_version": 3,
+  "name": "Stream Sniffer + Player",
+  "version": "1.0.0",
+  "description": "Detects m3u8, mpd, mp4, m3u links from network requests and plays them with built-in HLS/DASH/IPTV player. Supports Clearkey DRM.",
+  "author": "StreamSniffer",
+  "minimum_chrome_version": "100",
+  "action": {
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    },
+    "default_popup": "pages/popup.html",
+    "default_title": "Stream Sniffer + Player"
+  },
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "permissions": [
+    "tabs",
+    "storage",
+    "scripting",
+    "webRequest",
+    "declarativeNetRequest",
+    "clipboardWrite"
+  ],
+  "host_permissions": ["<all_urls>"],
+  "web_accessible_resources": [
+    {
+      "matches": ["<all_urls>"],
+      "resources": [
+        "player/player.html",
+        "player/iptv-player.html",
+        "player/settings.html",
+        "js/hls.min.js",
+        "js/shaka-player.compiled.js"
+      ]
+    }
+  ],
+  "options_ui": {
+    "page": "pages/options.html",
+    "open_in_tab": false
+  },
+  "commands": {
+    "_execute_action": {
+      "suggested_key": {
+        "default": "Alt+Shift+S"
+      }
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}

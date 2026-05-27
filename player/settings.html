@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Player Settings</title>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      font-family: 'Segoe UI', Tahoma, sans-serif;
+      background: #1a1a2e;
+      color: #eaeaea;
+      padding: 30px;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+    h1 { color: #2ecc71; font-size: 22px; margin-bottom: 24px; }
+    h2 { color: #b0b0c8; font-size: 16px; margin-bottom: 12px; margin-top: 20px; }
+    .setting-group {
+      background: #16213e;
+      padding: 16px;
+      border-radius: 6px;
+      margin-bottom: 12px;
+    }
+    .setting-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 0;
+    }
+    .setting-row label { font-size: 14px; color: #b0b0c8; }
+    .btn {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      background: #2ecc71;
+      color: #111;
+    }
+    .btn:hover { background: #27ae60; }
+    .btn-alt { background: #7f8c8d; color: #fff; }
+    .btn-alt:hover { background: #636e72; }
+    select, input[type="text"] {
+      background: #0f3460;
+      color: #eaeaea;
+      border: 1px solid #2d2d5e;
+      border-radius: 3px;
+      padding: 4px 8px;
+      font-size: 13px;
+      outline: none;
+    }
+    select:focus, input:focus { border-color: #2ecc71; }
+    .switch {
+      position: relative; display: inline-block; width: 36px; height: 20px;
+    }
+    .switch input { opacity:0; width:0; height:0; }
+    .slider {
+      position: absolute; cursor:pointer; top:0; left:0; right:0; bottom:0;
+      background: #444; transition:0.3s; border-radius:20px;
+    }
+    .slider:before {
+      position:absolute; content:''; height:16px; width:16px; left:2px; bottom:2px;
+      background:#fff; transition:0.3s; border-radius:50%;
+    }
+    .switch input:checked + .slider { background:#2ecc71; }
+    .switch input:checked + .slider:before { transform:translateX(16px); }
+    .actions { margin-top: 20px; display: flex; gap: 10px; }
+  </style>
+</head>
+<body>
+  <h1>Player Settings</h1>
+
+  <div class="setting-group">
+    <h2>Playback</h2>
+    <div class="setting-row">
+      <label>Click Action</label>
+      <select id="clickOption">
+        <option value="Nothing">Nothing</option>
+        <option value="PausePlay">Pause/Play</option>
+        <option value="MuteUnmute">Mute/Unmute</option>
+        <option value="Fullscreen">Fullscreen</option>
+      </select>
+    </div>
+    <div class="setting-row">
+      <label>Double Click Action</label>
+      <select id="dblClickOption">
+        <option value="Nothing">Nothing</option>
+        <option value="PausePlay">Pause/Play</option>
+        <option value="MuteUnmute">Mute/Unmute</option>
+        <option value="Fullscreen">Fullscreen</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="setting-group">
+    <h2>Stall Detection</h2>
+    <div class="setting-row">
+      <label>Stall Timeout (seconds)</label>
+      <select id="stallTimeout">
+        <option value="Off">Off</option>
+        <option value="10">10</option>
+        <option value="20" selected>20</option>
+        <option value="30">30</option>
+        <option value="60">60</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="actions">
+    <button id="backBtn" class="btn">Back to Player</button>
+    <button id="saveBtn" class="btn btn-alt">Save</button>
+  </div>
+
+  <script>
+    document.getElementById('backBtn').addEventListener('click', () => {
+      const url = window.location.href.replace('settings.html', 'player.html');
+      window.location.href = url;
+    });
+    document.getElementById('saveBtn').addEventListener('click', () => {
+      const clickOption = document.getElementById('clickOption').value;
+      const dblClickOption = document.getElementById('dblClickOption').value;
+      const stallTimeout = document.getElementById('stallTimeout').value;
+      localStorage.setItem('clickOption', clickOption);
+      localStorage.setItem('dblClickOption', dblClickOption);
+      localStorage.setItem('stallTimeout', stallTimeout);
+      alert('Settings saved');
+    });
+
+    document.getElementById('clickOption').value = localStorage.getItem('clickOption') || 'Nothing';
+    document.getElementById('dblClickOption').value = localStorage.getItem('dblClickOption') || 'Fullscreen';
+    document.getElementById('stallTimeout').value = localStorage.getItem('stallTimeout') || '20';
+  </script>
+</body>
+</html>

@@ -1,0 +1,236 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  width: 480px;
+  font-family: 'Segoe UI', Tahoma, sans-serif;
+  background: #1a1a2e;
+  color: #eaeaea;
+  font-size: 13px;
+  user-select: none;
+}
+
+.container {
+  padding: 14px 16px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #2d2d5e;
+}
+
+.title {
+  font-size: 16px;
+  font-weight: bold;
+  color: #2ecc71;
+}
+
+.header-buttons {
+  display: flex;
+  gap: 4px;
+}
+
+.toggles {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+  padding: 8px 10px;
+  background: #16213e;
+  border-radius: 6px;
+}
+
+.toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #b0b0c8;
+}
+
+.select-sm {
+  background: #0f3460;
+  color: #eaeaea;
+  border: 1px solid #2ecc71;
+  border-radius: 3px;
+  padding: 2px 4px;
+  font-size: 11px;
+  outline: none;
+  cursor: pointer;
+}
+
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 32px;
+  height: 18px;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #444;
+  transition: 0.3s;
+  border-radius: 18px;
+}
+
+.slider:before {
+  position: absolute;
+  content: '';
+  height: 14px;
+  width: 14px;
+  left: 2px;
+  bottom: 2px;
+  background-color: #fff;
+  transition: 0.3s;
+  border-radius: 50%;
+}
+
+.switch input:checked + .slider {
+  background-color: #2ecc71;
+}
+
+.switch input:checked + .slider:before {
+  transform: translateX(14px);
+}
+
+.info-section {
+  margin-bottom: 12px;
+}
+
+.info-row {
+  padding: 4px 0;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  word-break: break-all;
+}
+
+.info-label {
+  font-weight: 600;
+  color: #2ecc71;
+  min-width: 40px;
+  flex-shrink: 0;
+}
+
+.count-badge {
+  display: inline-block;
+  background: #f39c12;
+  color: #1a1a2e;
+  padding: 0 6px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: bold;
+  margin-right: 4px;
+  flex-shrink: 0;
+}
+
+a {
+  color: #3498db;
+  text-decoration: none;
+}
+
+a:hover {
+  color: #2ecc71;
+  text-decoration: underline;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+  padding-top: 10px;
+  border-top: 1px solid #2d2d5e;
+}
+
+.btn {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  transition: background 0.2s;
+}
+
+.btn-sm {
+  padding: 3px 8px;
+  font-size: 14px;
+  background: #16213e;
+  color: #b0b0c8;
+}
+
+.btn-sm:hover {
+  background: #0f3460;
+  color: #fff;
+}
+
+.btn-play {
+  background: #2ecc71;
+  color: #1a1a2e;
+}
+
+.btn-play:hover {
+  background: #27ae60;
+}
+
+.btn-copy {
+  background: #7f8c8d;
+  color: #fff;
+}
+
+.btn-copy:hover {
+  background: #636e72;
+}
+
+.btn-iptv {
+  background: #9b59b6;
+  color: #fff;
+}
+
+.btn-iptv:hover {
+  background: #8e44ad;
+}
+
+.iptv-section {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+  padding-top: 10px;
+  border-top: 1px solid #2d2d5e;
+}
+
+.iptv-url-input {
+  flex: 1;
+  padding: 6px 10px;
+  border: 1px solid #2d2d5e;
+  border-radius: 4px;
+  background: #16213e;
+  color: #eaeaea;
+  font-size: 12px;
+  outline: none;
+}
+
+.iptv-url-input:focus {
+  border-color: #9b59b6;
+}
