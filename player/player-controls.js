@@ -39,6 +39,16 @@ class PlayerControls {
     this._currentSpeed = 1;
     this._currentQuality = 'auto';
     
+    // Audio boost / compressor
+    this._audioBoostEnabled = localStorage.getItem('audioBoost') !== 'false';
+    this._audioCtx = null;
+    this._audioSource = null;
+    this._compressor = null;
+    this._boostGain = null;
+    this._masterGain = null;
+    this._audioMuted = false;
+    this._savedVolume = 1;
+    
     this.build();
     this.bindVideoEvents();
     this.bindControls();
@@ -46,6 +56,10 @@ class PlayerControls {
     
     // Auto-select Spanish audio if available
     this.autoSelectPreferredAudio();
+    
+    if (this._audioBoostEnabled) {
+      this.initAudioBoost();
+    }
   }
 
   build() {
@@ -137,6 +151,53 @@ class PlayerControls {
     }, 1500);
   }
 
+  initAudioBoost() {
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+
+      this._audioCtx = new AudioCtx();
+      this._audioSource = this._audioCtx.createMediaElementSource(this.video);
+      this._compressor = this._audioCtx.createDynamicsCompressor();
+      this._boostGain = this._audioCtx.createGain();
+      this._masterGain = this._audioCtx.createGain();
+
+      this._compressor.threshold.value = -50;
+      this._compressor.knee.value = 30;
+      this._compressor.ratio.value = 12;
+      this._compressor.attack.value = 0.003;
+      this._compressor.release.value = 0.25;
+
+      this._boostGain.gain.value = 1.8;
+
+      this._savedVolume = this.video.volume || 1;
+      this._masterGain.gain.value = this._savedVolume;
+
+      this._audioSource.connect(this._compressor);
+      this._compressor.connect(this._boostGain);
+      this._boostGain.connect(this._masterGain);
+      this._masterGain.connect(this._audioCtx.destination);
+
+      if (this.video.muted) {
+        this._audioMuted = true;
+        this._masterGain.gain.value = 0;
+      }
+
+      const resumeCtx = () => {
+        if (this._audioCtx && this._audioCtx.state === 'suspended') {
+          this._audioCtx.resume();
+        }
+      };
+      this.video.addEventListener('play', resumeCtx, { once: true });
+      document.addEventListener('click', resumeCtx, { once: true });
+
+      this.updateVolumeUI();
+    } catch (e) {
+      console.warn('Audio boost init failed:', e);
+      this._audioBoostEnabled = false;
+    }
+  }
+
   setIcon(btn, name) {
     if (ICONS[name]) btn.innerHTML = ICONS[name];
   }
@@ -181,10 +242,26 @@ class PlayerControls {
       }
     });
 
-    this.muteBtn.addEventListener('click', () => { this.video.muted = !this.video.muted; });
+    this.muteBtn.addEventListener('click', () => {
+      if (this._audioBoostEnabled && this._masterGain) {
+        this._audioMuted = !this._audioMuted;
+        this._masterGain.gain.value = this._audioMuted ? 0 : (this._savedVolume || 1);
+        this.updateVolumeUI();
+      } else {
+        this.video.muted = !this.video.muted;
+      }
+    });
     this.volumeBar.addEventListener('input', () => {
-      this.video.volume = parseFloat(this.volumeBar.value);
-      this.video.muted = false;
+      const vol = parseFloat(this.volumeBar.value);
+      if (this._audioBoostEnabled && this._masterGain) {
+        this._savedVolume = vol;
+        this._masterGain.gain.value = vol;
+        this._audioMuted = false;
+        this.updateVolumeUI();
+      } else {
+        this.video.volume = vol;
+        this.video.muted = false;
+      }
     });
 
     this.settingsBtn.addEventListener('click', (e) => {
@@ -246,9 +323,16 @@ class PlayerControls {
   }
 
   updateVolumeUI() {
-    const vol = this.video.muted ? 0 : this.video.volume;
+    let vol, isMuted;
+    if (this._audioBoostEnabled && this._masterGain) {
+      vol = this._audioMuted ? 0 : this._masterGain.gain.value;
+      isMuted = this._audioMuted;
+    } else {
+      vol = this.video.muted ? 0 : this.video.volume;
+      isMuted = this.video.muted;
+    }
     this.volumeBar.value = vol;
-    if (this.video.muted || vol === 0) {
+    if (isMuted || vol === 0) {
       this.setIcon(this.muteBtn, 'volume_off');
     } else if (vol < 0.5) {
       this.setIcon(this.muteBtn, 'volume_down');

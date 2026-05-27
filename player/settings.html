@@ -242,6 +242,17 @@
     </div>
   </div>
 
+  <div class="setting-group">
+    <h2>Audio</h2>
+    <div class="setting-row">
+      <label>Audio Boost</label>
+      <label class="switch">
+        <input type="checkbox" id="audioBoostCheckbox" checked>
+        <span class="slider"></span>
+      </label>
+    </div>
+  </div>
+
   <div class="actions">
     <button id="backBtn" class="btn">Back to Player</button>
     <button id="saveBtn" class="btn btn-alt">Save</button>
@@ -256,15 +267,18 @@
       const clickOption = document.getElementById('clickOption').value;
       const dblClickOption = document.getElementById('dblClickOption').value;
       const stallTimeout = document.getElementById('stallTimeout').value;
+      const audioBoost = document.getElementById('audioBoostCheckbox').checked;
       localStorage.setItem('clickOption', clickOption);
       localStorage.setItem('dblClickOption', dblClickOption);
       localStorage.setItem('stallTimeout', stallTimeout);
+      localStorage.setItem('audioBoost', audioBoost);
       alert('Settings saved');
     });
 
     document.getElementById('clickOption').value = localStorage.getItem('clickOption') || 'Nothing';
     document.getElementById('dblClickOption').value = localStorage.getItem('dblClickOption') || 'Fullscreen';
     document.getElementById('stallTimeout').value = localStorage.getItem('stallTimeout') || '20';
+    document.getElementById('audioBoostCheckbox').checked = localStorage.getItem('audioBoost') !== 'false';
   </script>
 </body>
 </html>
